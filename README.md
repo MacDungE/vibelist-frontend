@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # VibeList Frontend
 
 A modern React application built with TypeScript and the latest web technologies.
@@ -169,3 +170,6 @@ const { data, isLoading } = useQuery({
 4. Open [http://localhost:5173](http://localhost:5173) in your browser
 
 The application demonstrates all the installed packages with a beautiful, interactive interface.
+=======
+# vibelist-frontend
+>>>>>>> 59233409594c93c0ceab2d33ae60525592883ce4
