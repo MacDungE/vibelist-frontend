@@ -1,4 +1,4 @@
-import { MoodChangeOption } from '@/types';
+
 
 export const MOOD_CHANGE_LABELS = {
   maintain: "기분 유지하기",

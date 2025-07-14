@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { debounce } from 'lodash';
+
 import StepCard from '@/components/common/StepCard';
 import EmotionChart from '@/components/emotion/EmotionChart';
 import MoodChangeSelector from '@/components/mood/MoodChangeSelector';
@@ -33,7 +32,7 @@ const HomePage = () => {
   const chartRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef<HTMLDivElement>(null);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
-  const frameRef = useRef<number>();
+  const frameRef = useRef<number>(0);
 
   // Global pointer up handler
   useEffect(() => {

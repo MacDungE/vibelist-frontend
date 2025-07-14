@@ -9,6 +9,7 @@ interface Track {
   albumCover: string;
   spotifyUrl: string;
   order: number;
+  album?: string;
 }
 
 const PlaylistResultPage: React.FC = () => {
@@ -43,17 +44,17 @@ const PlaylistResultPage: React.FC = () => {
 
   // Player state
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [, setIsPlaying] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
-  const [isShuffle, setIsShuffle] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none');
-  const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(80);
+  const [isShuffle] = useState(false);
+  const [repeatMode] = useState<'none' | 'all' | 'one'>('none');
+  const [, setProgress] = useState(0);
+  const [, setCurrentTime] = useState(0);
+  const [, setDuration] = useState(0);
+  useState(80);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
-  const [playlistName, setPlaylistName] = useState("내 감정 플레이리스트");
+  const [playlistName] = useState("내 감정 플레이리스트");
   const [description, setDescription] = useState("");
   const [selectedTags, setSelectedTags] = useState<Array<{id: number, name: string}>>([]);
   const [tagSuggestions, setTagSuggestions] = useState<Array<{id: number, name: string}>>([]);
@@ -147,7 +148,7 @@ const PlaylistResultPage: React.FC = () => {
       const query = tagMatch[0].slice(1);
       searchTags(query).then(suggestions => {
         setTagSuggestions(suggestions);
-        setShowInlineSuggestions(suggestions.length > 0 || (query && isValidTagName(query)));
+        setShowInlineSuggestions(suggestions.length > 0 || (query !== '' && isValidTagName(query)));
         setSelectedSuggestionIndex(0);
       });
     } else {
@@ -273,7 +274,7 @@ const PlaylistResultPage: React.FC = () => {
       // Search for matching tags
       searchTags(value).then(suggestions => {
         setTagSuggestions(suggestions);
-        setShowInlineSuggestions(suggestions.length > 0 || (value && isValidTagName(value)));
+        setShowInlineSuggestions(suggestions.length > 0 || (value !== '' && isValidTagName(value)));
         setSelectedSuggestionIndex(0);
       });
     } else {
@@ -320,12 +321,12 @@ const PlaylistResultPage: React.FC = () => {
   };
 
   // Player refs
-  const playerRef = useRef<HTMLIFrameElement>(null);
+
   const progressIntervalRef = useRef<number | null>(null);
-  const playerContainerRef = useRef<HTMLDivElement>(null);
+
   const playerCardRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [playerHeight, setPlayerHeight] = useState<number | undefined>(undefined);
+  const [, setPlayerHeight] = useState<number | undefined>(undefined);
 
   // Emotion and mood state from location state
   const [selectedEmotion] = useState(location.state?.selectedEmotion || "즐거운 상태");
@@ -402,14 +403,14 @@ const PlaylistResultPage: React.FC = () => {
   };
 
   // Play/pause toggle
-  const togglePlayPause = () => {
-    setIsPlaying(!isPlaying);
-    if (!isPlaying) {
-      startProgressTracking();
-    } else if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
-  };
+  // const _togglePlayPause = () => {
+  //   setIsPlaying(!isPlaying);
+  //   if (!isPlaying) {
+  //     startProgressTracking();
+  //   } else if (progressIntervalRef.current) {
+  //     clearInterval(progressIntervalRef.current);
+  //   }
+  // };
 
   // Play next track
   const playNextTrack = () => {
@@ -426,38 +427,36 @@ const PlaylistResultPage: React.FC = () => {
   };
 
   // Play previous track
-  const playPrevTrack = () => {
-    if (currentTime > 3) {
-      setCurrentTime(0);
-      setProgress(0);
-    } else {
-      const prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
-      setCurrentTrackIndex(prevIndex);
-    }
-  };
+  // const _playPrevTrack = () => {
+  //   if (currentTime > 3) {
+  //     setCurrentTime(0);
+  //     setProgress(0);
+  //   } else {
+  //     const prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+  //     setCurrentTrackIndex(prevIndex);
+  //   }
+  // };
 
   // Toggle shuffle
-  const toggleShuffle = () => {
-    setIsShuffle(!isShuffle);
-  };
+
 
   // Toggle repeat mode
-  const toggleRepeat = () => {
-    if (repeatMode === "none") {
-      setRepeatMode("all");
-    } else if (repeatMode === "all") {
-      setRepeatMode("one");
-    } else {
-      setRepeatMode("none");
-    }
-  };
+  // const _toggleRepeat = () => {
+  //   if (repeatMode === "none") {
+  //     setRepeatMode("all");
+  //   } else if (repeatMode === "all") {
+  //     setRepeatMode("one");
+  //   } else {
+  //     setRepeatMode("none");
+  //   }
+  // };
 
   // Format time
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
+  // const _formatTime = (seconds: number) => {
+  //   const mins = Math.floor(seconds / 60);
+  //   const secs = Math.floor(seconds % 60);
+  //   return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  // };
 
   // Convert time string to seconds
   const convertTimeToSeconds = (timeStr: string) => {
@@ -466,21 +465,21 @@ const PlaylistResultPage: React.FC = () => {
   };
 
   // Handle progress bar click
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!playerReady) return;
-    const progressBar = e.currentTarget;
-    const rect = progressBar.getBoundingClientRect();
-    const clickPosition = (e.clientX - rect.left) / rect.width;
-    const newTime = clickPosition * convertTimeToSeconds(playlist[currentTrackIndex].duration);
-    setCurrentTime(newTime);
-    setProgress(clickPosition * 100);
-  };
+  // const _handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  //   if (!playerReady) return;
+  //   const progressBar = e.currentTarget;
+  //   const rect = progressBar.getBoundingClientRect();
+  //   const clickPosition = (e.clientX - rect.left) / rect.width;
+  //   const newTime = clickPosition * convertTimeToSeconds(playlist[currentTrackIndex].duration);
+  //   setCurrentTime(newTime);
+  //   setProgress(clickPosition * 100);
+  // };
 
   // Handle volume change
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseInt(e.target.value);
-    setVolume(newVolume);
-  };
+  // const _handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const newVolume = parseInt(e.target.value);
+  //   setVolume(newVolume);
+  // };
 
   // Save playlist
   const handleSavePlaylist = () => {

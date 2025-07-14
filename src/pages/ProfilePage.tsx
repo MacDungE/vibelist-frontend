@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SpotifyPlayerModal from '@/components/common/SpotifyPlayerModal';
 import PostCard from '@/components/common/PostCard';
 import type { Post } from '@/components/common/PostCard';
-import type { Comment } from '@/types';
+
 import { Button } from '@/components/ui/button';
 
 // Mock data for posts and liked posts
@@ -109,7 +109,7 @@ const initialProfile = {
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'posts' | 'liked'>('posts');
-  const [isDarkMode] = useState(false);
+
   const [spotifyModalUri, setSpotifyModalUri] = useState<string | null>(null);
   const [profile, setProfile] = useState(initialProfile);
   const [editOpen, setEditOpen] = useState(false);
@@ -141,9 +141,7 @@ const ProfilePage: React.FC = () => {
   };
 
   // Open modal
-  const handlePostClick = (post: Post) => {
-    setSpotifyModalUri(post.spotifyUri);
-  };
+
 
   // Modal for Spotify Player
   return (

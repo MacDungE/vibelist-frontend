@@ -30,8 +30,8 @@ const MenuBar: React.FC<{ className?: string }> = ({ className = '' }) => {
       <div className="flex items-center justify-between rounded-full px-3 sm:px-6 py-2.5 sm:py-3.5 relative overflow-hidden" style={{ background: 'var(--surface)' }}>
         <div
           className="absolute inset-0 border border-transparent rounded-full pointer-events-none opacity-100"
-          style={{ background: 'linear-gradient(180deg, var(--primary), var(--primary-600))' }}
           style={{
+            background: 'linear-gradient(180deg, var(--primary), var(--primary-600))',
             padding: '1px',
             margin: '-1px',
             WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',

@@ -1,6 +1,4 @@
-import { EmotionState } from '@/types';
-
-export const EMOTION_LABELS: Record<EmotionState, string> = {
+export const EMOTION_LABELS: Record<string, string> = {
   "활기찬 상태": "활기참",
   "긴장된 상태": "긴장",
   "즐거운 상태": "기쁨",

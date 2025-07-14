@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginModal from './LoginModal';
@@ -8,6 +8,7 @@ export type Track = {
   artist: string;
   duration: string;
   cover?: string;
+  album?: string;
 };
 
 export type Post = {
@@ -26,6 +27,7 @@ export type Post = {
   authorAvatar?: string;
   emotion?: string;
   mood?: string;
+  thumbnail?: string;
 };
 
 interface PostCardProps {
@@ -46,9 +48,10 @@ interface CardComment {
   content: string;
   createdAt: string;
   parentId?: number;
+  replies?: CardComment[];
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, isDarkMode, setSpotifyModalUri, onLike, onComment }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotifyModalUri, onLike }) => {
   const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMessage, setLoginModalMessage] = useState('');
@@ -56,7 +59,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, isDarkMod
   const { isLoggedIn } = useAuth();
   const emotion = post.emotion || '무기력한 상태';
   const mood = post.mood || '반대 기분';
-  const createdAt = post.createdAt || '2025.01.08';
+
   const playlistLength = post.playlist?.length || 0;
   const playlistCover = post.playlist?.[0]?.cover || 'https://i.scdn.co/image/ab67616d0000b27309a857d20020536deb494427';
   const playlistArtist = post.playlist?.[0]?.artist || '';
@@ -153,7 +156,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, isDarkMod
   const getAvatar = (username: string) => `https://readdy.ai/api/search-image?query=avatar%20${username}&width=32&height=32&seq=avatar&orientation=squarish`;
 
   // 댓글/대댓글 렌더 함수
-  const renderComments = (nodes: (CardComment & { replies: CardComment[] })[], depth = 0) =>
+  const renderComments = (nodes: CardComment[], depth = 0) =>
     nodes.map(c => (
       <div key={c.id} className={`flex gap-2 mb-3 ${depth > 0 ? 'ml-8 border-l-2 border-[var(--stroke)] pl-4' : ''}`}>
         <img src={getAvatar(c.authorUsername)} className="w-8 h-8 rounded-full object-cover" />
@@ -202,7 +205,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, isDarkMod
             </form>
           )}
           {/* 대댓글 재귀 */}
-          {c.replies.length > 0 && renderComments(c.replies, depth + 1)}
+          {c.replies && c.replies.length > 0 && renderComments(c.replies, depth + 1)}
         </div>
       </div>
     ));

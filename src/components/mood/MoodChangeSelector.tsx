@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoodChangeOption } from '@/types';
+import type { MoodChangeOption } from '@/types';
 import { MOOD_CHANGE_LABELS } from '@/constants/mood';
 
 interface MoodChangeSelectorProps {

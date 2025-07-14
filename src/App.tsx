@@ -1,8 +1,8 @@
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Header from '@/components/layout/Header';
-import Footer, { FloatingFooter } from '@/components/layout/Footer';
+
 import HomePage from '@/pages/HomePage';
-import CommunityPage from '@/pages/CommunityPage';
+
 import ProfilePage from '@/pages/ProfilePage';
 import PlaylistResultPage from '@/pages/PlaylistResultPage';
 import BottomNav from '@/components/common/BottomNav';
@@ -33,9 +33,8 @@ function useViewportHeightVar() {
 
 function App() {
   useViewportHeightVar();
-  const location = useLocation();
-  const isMainPage = location.pathname === '/' || location.pathname === '/home';
-  const isPlaylistResultPage = location.pathname === '/playlist-result';
+  
+
 
   return (
     <AuthProvider>

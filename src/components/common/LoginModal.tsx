@@ -14,17 +14,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, message = "이
   if (!isOpen) return null;
 
   const handleGoogleLogin = () => {
-    login('google');
+    const userData = { id: '1', name: 'Google User', email: 'google@example.com', avatar: 'https://via.placeholder.com/40' };
+    login('google', userData);
     onClose();
   };
 
   const handleKakaoLogin = () => {
-    login('kakao');
+    const userData = { id: '2', name: 'Kakao User', email: 'kakao@example.com', avatar: 'https://via.placeholder.com/40' };
+    login('kakao', userData);
     onClose();
   };
 
   const handleAppleLogin = () => {
-    login('apple');
+    const userData = { id: '3', name: 'Apple User', email: 'apple@example.com', avatar: 'https://via.placeholder.com/40' };
+    login('apple', userData);
     onClose();
   };
 

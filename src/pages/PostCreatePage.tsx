@@ -1,4 +1,4 @@
-import React, { useState, KeyboardEvent, useContext } from 'react';
+import React, { useState, type KeyboardEvent, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PostsContext } from '@/pages/PostsContext';
 
@@ -70,7 +70,7 @@ const PostCreatePage: React.FC = () => {
       alert('플레이리스트를 선택해주세요!');
       return;
     }
-    const playlist = mockPlaylists.find(p => p.id === selectedPlaylist);
+
     const newPost = {
       id: Date.now(),
       description,

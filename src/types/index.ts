@@ -3,6 +3,11 @@ export interface EmotionPosition {
   y: number;
 }
 
+export interface EmotionState {
+  position: EmotionPosition;
+  isDragging: boolean;
+}
+
 export type MoodChangeOption = 'maintain' | 'improve' | 'calm' | 'opposite';
 
 export interface Comment {

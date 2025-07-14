@@ -1,14 +1,13 @@
 import React, { useContext } from 'react';
 import PostCard from '@/components/common/PostCard';
-import type { Post } from '@/components/common/PostCard';
+
 import { PostsContext } from '@/pages/PostsContext';
-import type { Comment } from '@/types';
+
 
 const ExplorePage: React.FC = () => {
   const { posts, setPosts } = useContext(PostsContext);
   const isDarkMode = false;
-  const [spotifyModalUri, setSpotifyModalUri] = React.useState<string | null>(null);
-  const [commentsByPost] = React.useState<Record<number, Comment[]>>({}); // 댓글 기능은 비워둠
+  const [, setSpotifyModalUri] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState('');
   const [selectedTag, setSelectedTag] = React.useState('');
   // 모든 태그 추출(중복 제거)
@@ -23,10 +22,7 @@ const ExplorePage: React.FC = () => {
   const handleLike = (postId: number) => {
     setPosts(prev => prev.map(post => post.id === postId ? { ...post, likes: post.likes + 1 } : post));
   };
-  const handleComment = (postId: number) => {
-    alert('댓글 기능은 곧 지원됩니다!');
-  };
-  const handleAddComment = () => {};
+
 
   const trendingPosts = [...posts].sort((a, b) => b.likes - a.likes).slice(0, 5);
   // 추천(피드) 포스트: 최신순 전체
@@ -97,7 +93,7 @@ const ExplorePage: React.FC = () => {
                   setSpotifyModalUri={setSpotifyModalUri}
                   showAuthor={true}
                   onLike={() => handleLike(post.id)}
-                  onComment={() => handleComment(post.id)}
+                  onComment={() => {}}
                 />
               ))
             )
@@ -110,7 +106,7 @@ const ExplorePage: React.FC = () => {
                 setSpotifyModalUri={setSpotifyModalUri}
                 showAuthor={true}
                 onLike={() => handleLike(post.id)}
-                onComment={() => handleComment(post.id)}
+                onComment={() => {}}
               />
             ))
           )}
