@@ -263,10 +263,10 @@ body {
   }
 }
 
-:focus {
+/*:focus {
   outline: 2px solid rgba(255, 255, 255, 0.6);
   outline-offset: 2px;
-}
+}*/
 
 .parallax-scroll {
   transform: translateY(calc(var(--scroll-y) * 0.03));
