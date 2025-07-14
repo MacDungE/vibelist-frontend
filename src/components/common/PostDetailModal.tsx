@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Post } from './PostCard';
-import type { Comment } from '@/types';
+
+import type {Comment} from "@/types/common.ts";
 
 interface PostDetailModalProps {
   isOpen: boolean;

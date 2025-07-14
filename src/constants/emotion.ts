@@ -1,3 +1,22 @@
+// 감정 위치 초기값
+export const INITIAL_EMOTION_POSITION = {
+  x: 0,
+  y: 0,
+};
+
+// 감정 상태 매핑
+export const EMOTION_STATE = {
+  활기찬: "활기찬 상태",
+  긴장된: "긴장된 상태",
+  즐거운: "즐거운 상태",
+  걱정되는: "걱정되는 상태",
+  편안한: "편안한 상태",
+  우울한: "우울한 상태",
+  나른한: "나른한 상태",
+  무기력한: "무기력한 상태",
+};
+
+// 감정 라벨 매핑 (기존)
 export const EMOTION_LABELS: Record<string, string> = {
   "활기찬 상태": "활기참",
   "긴장된 상태": "긴장",

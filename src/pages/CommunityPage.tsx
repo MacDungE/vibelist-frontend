@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PostCard from '@/components/common/PostCard';
 import type { Post } from '@/components/common/PostCard';
+import { EMOTION_STATE } from '@/constants/emotion';
 
 
 // Mock public posts data
@@ -43,7 +44,7 @@ const allPosts: Post[] = [
     ],
     author: '운동러버',
     authorAvatar: '',
-    emotion: '활기찬 상태',
+    emotion: EMOTION_STATE.활기찬,
     mood: '기분 올리기',
   },
   {

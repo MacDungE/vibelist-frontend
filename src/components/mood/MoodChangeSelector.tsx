@@ -1,6 +1,7 @@
 import React from 'react';
-import type { MoodChangeOption } from '@/types';
 import { MOOD_CHANGE_LABELS } from '@/constants/mood';
+import { EMOTION_STATE } from '@/constants/emotion';
+import type {MoodChangeOption} from "@/types/common.ts";
 
 interface MoodChangeSelectorProps {
   selected: MoodChangeOption | null;
@@ -10,14 +11,14 @@ interface MoodChangeSelectorProps {
 
 // 감정별 허용 mood change 옵션 매핑
 const EMOTION_MOOD_OPTIONS: Record<string, MoodChangeOption[]> = {
-  '활기찬 상태': ['maintain', 'calm', 'opposite'],
-  '즐거운 상태': ['maintain', 'improve', 'calm', 'opposite'],
-  '긴장된 상태': ['calm', 'opposite', 'improve'],
-  '걱정되는 상태': ['calm', 'opposite'],
-  '편안한 상태': ['maintain', 'improve', 'opposite'],
-  '나른한 상태': ['maintain', 'improve', 'calm', 'opposite'],
-  '우울한 상태': ['improve', 'calm', 'opposite'],
-  '무기력한 상태': ['opposite', 'improve', 'calm'],
+  [EMOTION_STATE.활기찬]: ['maintain', 'calm', 'opposite'],
+  [EMOTION_STATE.즐거운]: ['maintain', 'improve', 'calm', 'opposite'],
+  [EMOTION_STATE.긴장된]: ['calm', 'opposite', 'improve'],
+  [EMOTION_STATE.걱정되는]: ['calm', 'opposite'],
+  [EMOTION_STATE.편안한]: ['maintain', 'improve', 'opposite'],
+  [EMOTION_STATE.나른한]: ['maintain', 'improve', 'calm', 'opposite'],
+  [EMOTION_STATE.우울한]: ['improve', 'calm', 'opposite'],
+  [EMOTION_STATE.무기력한]: ['opposite', 'improve', 'calm'],
 };
 
 const MoodChangeSelector: React.FC<MoodChangeSelectorProps> = ({ selected, onSelect, selectedEmotion }) => {

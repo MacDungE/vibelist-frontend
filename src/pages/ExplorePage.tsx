@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import PostCard from '@/components/common/PostCard';
 
-import { PostsContext } from '@/pages/PostsContext';
+import { PostsContext } from '@/contexts/PostsContext';
 
 
 const ExplorePage: React.FC = () => {

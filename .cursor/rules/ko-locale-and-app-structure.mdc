@@ -7,6 +7,7 @@ alwaysApply: true
 - **components**
   - **ui**: 앱의 모든 페이지와 컴포넌트에서 사용하는 디자인 시스템 컴포넌트 모음 폴더 (shadcn)
 - **constants**: 중복되는 String, number 타입은 리터럴로 만들지 말고 반드시 상수로 선언하여 이 폴더에 저장
+- **contexts**: context 관련코드가 위치하는 폴더
 - **http**: 통신과 관련된 코드가 존재하는 폴더 (API, axios 등)
 - **pages**: 각 페이지를 구성하는 컴포넌트 폴더
 - **hooks**: 공통적으로 사용하는 React hook이 존재하는 폴더
