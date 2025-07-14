@@ -1,5 +1,6 @@
 import React from 'react';
-import type { EmotionPosition } from '@/types';
+
+import type {EmotionPosition} from "@/types/common.ts";
 
 interface EmotionChartProps {
   position: EmotionPosition;

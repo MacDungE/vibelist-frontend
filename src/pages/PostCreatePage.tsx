@@ -1,6 +1,6 @@
 import React, { useState, type KeyboardEvent, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PostsContext } from '@/pages/PostsContext';
+import { PostsContext } from '@/contexts/PostsContext';
 
 const mockPlaylists = [
   {

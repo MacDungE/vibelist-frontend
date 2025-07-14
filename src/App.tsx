@@ -11,10 +11,10 @@ import PostCreatePage from '@/pages/PostCreatePage';
 import SettingsPage from '@/pages/SettingsPage';
 import LoginPage from '@/pages/LoginPage';
 import AuthGuard from '@/components/AuthGuard';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
-import { PostsProvider } from '@/pages/PostsContext';
 import UserProfilePage from '@/pages/UserProfilePage';
+import {AuthProvider} from "@/contexts/AuthProvider.tsx";
+import {PostsProvider} from "@/contexts/PostsProvider.tsx";
 
 function useViewportHeightVar() {
   useEffect(() => {

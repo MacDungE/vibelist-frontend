@@ -4,15 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import StepCard from '@/components/common/StepCard';
 import EmotionChart from '@/components/emotion/EmotionChart';
 import MoodChangeSelector from '@/components/mood/MoodChangeSelector';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import LoginModal from '@/components/common/LoginModal';
+import { EMOTION_STATE } from '@/constants/emotion';
 
-interface EmotionPosition {
-  x: number;
-  y: number;
-}
-
-type MoodChangeOption = 'maintain' | 'improve' | 'calm' | 'opposite';
+import type {EmotionPosition, MoodChangeOption} from "@/types/common.ts";
 
 const initialPosition: EmotionPosition = { x: 50, y: 50 };
 
@@ -148,19 +144,19 @@ const HomePage = () => {
   // Get emotion state
   const getEmotionState = (x: number, y: number): string => {
     if (y >= 75) {
-      if (x < 50) return "활기찬 상태";
-      return "긴장된 상태";
+      if (x < 50) return EMOTION_STATE.활기찬;
+      return EMOTION_STATE.긴장된;
     }
     if (y >= 50) {
-      if (x < 50) return "즐거운 상태";
-      return "걱정되는 상태";
+      if (x < 50) return EMOTION_STATE.즐거운;
+      return EMOTION_STATE.걱정되는;
     }
     if (y >= 25) {
-      if (x < 50) return "편안한 상태";
-      return "우울한 상태";
+      if (x < 50) return EMOTION_STATE.편안한;
+      return EMOTION_STATE.우울한;
     }
-    if (x < 50) return "나른한 상태";
-    return "무기력한 상태";
+    if (x < 50) return EMOTION_STATE.나른한;
+    return EMOTION_STATE.무기력한;
   };
 
   // Card expansion handlers
