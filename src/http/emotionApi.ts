@@ -1,6 +1,5 @@
-import axios from 'axios';
+import apiClient from './client';
 
-import type {EmotionPosition} from "@/types/common.ts";
+import type { EmotionPosition } from '@/types/common.ts';
 
-export const postEmotion = (position: EmotionPosition) =>
-  axios.post('/api/emotion', position); 
+export const postEmotion = (position: EmotionPosition) => apiClient.post('/api/emotion', position);
