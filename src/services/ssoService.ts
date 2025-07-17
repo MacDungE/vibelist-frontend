@@ -1,5 +1,5 @@
 import apiClient from '@/http/client';
-import type { SSOStatusResponse, SocialLoginUrls, SSOProvider, LoginMethod } from '@/types/auth';
+import type { SocialLoginUrls, SSOProvider, SSOStatusResponse } from '@/types/auth';
 import { API_BASE_URL } from '@/constants/api';
 
 class SSOService {
@@ -16,8 +16,19 @@ class SSOService {
    * 인증 상태 확인
    */
   async getStatus(): Promise<SSOStatusResponse> {
-    const response = await apiClient.get('/v1/sso/status');
-    return response.data;
+    try {
+      const response = await apiClient.get('/v1/sso/status');
+      return response.data;
+    } catch (error: any) {
+      // 401 에러는 인증되지 않은 상태를 의미하므로 정상적인 응답으로 처리
+      if (error.response?.status === 401) {
+        return {
+          authenticated: false,
+          checkedAt: new Date().toISOString(),
+        };
+      }
+      throw error;
+    }
   }
 
   /**

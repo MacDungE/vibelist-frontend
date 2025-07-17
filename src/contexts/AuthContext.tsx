@@ -1,13 +1,12 @@
-import {createContext} from 'react';
-import type {User} from "@/types/user.tsx";
+import { createContext } from 'react';
+import type { User, AuthState, SSOProvider, LoginMethod } from '@/types/auth';
 
 export interface AuthContextType {
-  isLoggedIn: boolean;
-  user: User | null;
-  loginProvider: string | null;
-  login: (provider: string, userData: User) => void;
-  logout: () => void;
-  loading: boolean;
+  state: AuthState;
+  checkAuthStatus: (isInitial?: boolean) => Promise<void>;
+  login: (provider: SSOProvider, method?: LoginMethod) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshToken: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

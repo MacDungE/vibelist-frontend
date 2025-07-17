@@ -10,6 +10,7 @@ import ExplorePage from '@/pages/ExplorePage';
 import PostCreatePage from '@/pages/PostCreatePage';
 import SettingsPage from '@/pages/SettingsPage';
 import LoginPage from '@/pages/LoginPage';
+import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import AuthGuard from '@/components/AuthGuard';
 import { useEffect } from 'react';
 import UserProfilePage from '@/pages/UserProfilePage';
@@ -53,9 +54,27 @@ function App() {
           <main className='w-full'>
             <div className='container mx-auto flex w-full flex-1 flex-col px-4 pt-4 md:px-6'>
               <Routes>
+                {/* 기본 라우트 */}
+                <Route path='/' element={<HomePage />} />
                 <Route path='/home' element={<HomePage />} />
                 <Route path='/explore' element={<ExplorePage />} />
                 <Route path='/feed' element={<ExplorePage />} />
+
+                {/* 인증 관련 라우트 */}
+                <Route
+                  path='/login'
+                  element={
+                    <AuthGuard requireAuth={false}>
+                      <LoginPage />
+                    </AuthGuard>
+                  }
+                />
+                <Route path='/auth/callback' element={<AuthCallbackPage />} />
+                <Route path='/auth/signup' element={<AuthCallbackPage />} />
+                <Route path='/auth/integration' element={<AuthCallbackPage />} />
+                <Route path='/auth/error' element={<AuthCallbackPage />} />
+
+                {/* 보호된 라우트 */}
                 <Route
                   path='/create'
                   element={
@@ -96,14 +115,8 @@ function App() {
                     </AuthGuard>
                   }
                 />
-                <Route
-                  path='/login'
-                  element={
-                    <AuthGuard requireAuth={false}>
-                      <LoginPage />
-                    </AuthGuard>
-                  }
-                />
+
+                {/* 404 페이지 */}
                 <Route path='*' element={<HomePage />} />
               </Routes>
             </div>
