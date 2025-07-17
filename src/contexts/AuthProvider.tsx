@@ -111,29 +111,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // 소셜 로그인
-  const login = useCallback(
-    async (provider: SSOProvider, method: LoginMethod = 'redirect') => {
-      try {
-        dispatch({ type: 'AUTH_START' });
+  // 소셜 로그인 (보안 강화된 리다이렉트 방식)
+  const login = useCallback(async (provider: SSOProvider, method: LoginMethod = 'redirect') => {
+    try {
+      dispatch({ type: 'AUTH_START' });
 
-        if (method === 'popup') {
-          await ssoService.startSocialLogin(provider);
-        } else {
-          await ssoService.redirectToSocialLogin(provider);
-        }
+      // 새로운 보안 강화된 방식은 리다이렉트만 지원
+      await ssoService.login(provider);
 
-        // 로그인 성공 후 인증 상태 재확인
-        await checkAuthStatus();
-      } catch (error) {
-        dispatch({
-          type: 'AUTH_FAILURE',
-          payload: error instanceof Error ? error.message : '로그인 실패',
-        });
-      }
-    },
-    [checkAuthStatus]
-  );
+      // 리다이렉트가 발생하므로 이 코드는 실행되지 않음
+      // 실제 인증 상태 확인은 AuthCallbackPage에서 처리됨
+    } catch (error) {
+      dispatch({
+        type: 'AUTH_FAILURE',
+        payload: error instanceof Error ? error.message : '로그인 실패',
+      });
+      throw error; // 에러를 다시 던져서 컴포넌트에서 처리할 수 있도록 함
+    }
+  }, []);
 
   // 로그아웃
   const logout = useCallback(async () => {
@@ -163,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       hasMountedRef.current = true;
       checkAuthStatus(true);
     }
-  }, [checkAuthStatus]);
+  }, []);
 
   const value: AuthContextType = {
     state,

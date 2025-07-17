@@ -3,6 +3,9 @@ import type { SocialLoginUrls, SSOProvider, SSOStatusResponse } from '@/types/au
 import { API_BASE_URL } from '@/constants/api';
 
 class SSOService {
+  // 🔧 중복 호출 방지를 위한 플래그
+  private isClaimingTokens = false;
+
   /**
    * 소셜 로그인 URL 목록 조회
    */
@@ -10,6 +13,34 @@ class SSOService {
     const params = redirectUrl ? { redirectUrl } : {};
     const response = await apiClient.get('/v1/sso/login-urls', { params });
     return response.data;
+  }
+
+  /**
+   * 임시 토큰으로 실제 JWT 토큰 클레임 (보안 강화 v2)
+   */
+  async claimTokens(tokenId: string): Promise<{
+    status: string;
+    message: string;
+    provider?: string;
+    isNewUser?: boolean;
+    tempUserId?: string;
+  }> {
+    // 🔧 중복 호출 방지
+    if (this.isClaimingTokens) {
+      console.log('이미 토큰 클레임 중입니다. 중복 호출을 방지합니다.');
+      throw new Error('토큰 클레임이 이미 진행 중입니다.');
+    }
+
+    this.isClaimingTokens = true;
+
+    try {
+      const response = await apiClient.post('/v1/sso/claim-tokens', {
+        tokenId,
+      });
+      return response.data;
+    } finally {
+      this.isClaimingTokens = false;
+    }
   }
 
   /**
@@ -48,53 +79,23 @@ class SSOService {
   }
 
   /**
-   * 소셜 로그인 시작 (팝업 방식)
+   * 소셜 로그인 (보안 강화된 리다이렉트 방식만 지원)
    */
-  async startSocialLogin(provider: SSOProvider): Promise<void> {
-    const urls = await this.getLoginUrls();
-    const loginUrl = `${API_BASE_URL}${urls[provider]}`;
+  async login(provider: SSOProvider): Promise<void> {
+    try {
+      const currentUrl = window.location.origin + '/auth/callback';
+      const urls = await this.getLoginUrls(currentUrl);
 
-    // 팝업 창으로 소셜 로그인 시작
-    const popup = window.open(
-      loginUrl,
-      'social-login',
-      'width=500,height=600,scrollbars=yes,resizable=yes'
-    );
-
-    // 팝업 모니터링
-    return new Promise((resolve, reject) => {
-      const checkClosed = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkClosed);
-          // 팝업이 닫히면 인증 상태 확인
-          this.getStatus()
-            .then(status => {
-              if (status.authenticated) {
-                resolve();
-              } else {
-                reject(new Error('로그인이 취소되었습니다.'));
-              }
-            })
-            .catch(reject);
-        }
-      }, 1000);
-
-      // 10분 후 타임아웃
-      setTimeout(() => {
-        clearInterval(checkClosed);
-        popup?.close();
-        reject(new Error('로그인 시간이 초과되었습니다.'));
-      }, 600000);
-    });
-  }
-
-  /**
-   * 리다이렉트 방식 소셜 로그인
-   */
-  async redirectToSocialLogin(provider: SSOProvider): Promise<void> {
-    const urls = await this.getLoginUrls(window.location.origin + '/auth/callback');
-    const loginUrl = `${API_BASE_URL}${urls[provider]}`;
-    window.location.href = loginUrl;
+      if (urls[provider]) {
+        const loginUrl = `${API_BASE_URL}${urls[provider]}`;
+        window.location.href = loginUrl;
+      } else {
+        throw new Error(`${provider} 로그인 URL을 찾을 수 없습니다.`);
+      }
+    } catch (error) {
+      console.error('로그인 실패:', error);
+      throw error;
+    }
   }
 }
 

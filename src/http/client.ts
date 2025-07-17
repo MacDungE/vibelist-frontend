@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { API_BASE_URL, API_TIMEOUT, API_ENDPOINTS } from '@/constants/api';
 
+// axios 전역 설정
+axios.defaults.withCredentials = true;
+
 // 토큰 재발급 중인지 확인하는 플래그
 let isRefreshing = false;
 // 토큰 재발급 대기 중인 요청들을 저장하는 큐
@@ -26,30 +29,28 @@ const processQueue = (error: any, token: string | null = null) => {
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
+  withCredentials: true, // HttpOnly 쿠키 사용을 위해 필수
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // 쿠키 인증을 위해 필요
 });
 
-// 요청 인터셉터 (필요시 토큰 추가 등)
+// 요청 인터셉터
 apiClient.interceptors.request.use(
   config => {
-    // 로컬 스토리지에서 토큰 가져오기 (필요시)
-    // const token = localStorage.getItem('accessToken');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    console.log('🚀 API 요청:', config.method?.toUpperCase(), config.url);
     return config;
   },
   error => {
+    console.error('❌ API 요청 에러:', error);
     return Promise.reject(error);
   }
 );
 
-// 응답 인터셉터 (에러 처리 등)
+// 응답 인터셉터 (토큰 만료 처리)
 apiClient.interceptors.response.use(
   response => {
+    console.log('✅ API 응답:', response.status, response.config.url);
     return response;
   },
   async error => {
@@ -60,7 +61,6 @@ apiClient.interceptors.response.use(
       // refresh 토큰 API 호출 자체가 401이면 바로 리다이렉트
       // 또는 status 확인 API는 인증되지 않은 상태에서도 정상적으로 호출 가능
       if (
-        originalRequest.url?.includes(`${API_ENDPOINTS.AUTH}/refresh`) ||
         originalRequest.url?.includes('/v1/sso/refresh') ||
         originalRequest.url?.includes('/v1/sso/status')
       ) {
@@ -69,6 +69,7 @@ apiClient.interceptors.response.use(
           return Promise.reject(error);
         }
         // refresh 실패는 로그인 페이지로 리다이렉트
+        console.error('토큰 갱신 실패:', error);
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -107,11 +108,13 @@ apiClient.interceptors.response.use(
         isRefreshing = false;
 
         // 로그인 페이지로 리다이렉트
+        console.error('토큰 갱신 실패:', refreshError);
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
 
+    console.error('❌ API 응답 에러:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
 );

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth, useAuthStatus } from '@/hooks/useAuth';
-import type { SSOProvider, LoginMethod } from '@/types/auth';
+import type { SSOProvider } from '@/types/auth';
 
 const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
   const { login } = useAuth();
   const { isAuthenticated, loading, error } = useAuthStatus();
   const [selectedProvider, setSelectedProvider] = useState<SSOProvider | null>(null);
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('redirect');
 
   // 이미 로그인된 경우 홈페이지로 리다이렉트
   if (isAuthenticated) {
@@ -18,11 +16,8 @@ const LoginPage: React.FC = () => {
   const handleSocialLogin = async (provider: SSOProvider) => {
     setSelectedProvider(provider);
     try {
-      await login(provider, loginMethod);
-      // 리다이렉트 방식인 경우 여기 코드는 실행되지 않음
-      if (loginMethod === 'popup') {
-        navigate('/home');
-      }
+      await login(provider); // 리다이렉트 방식만 사용
+      // 리다이렉트가 발생하므로 이 코드는 실행되지 않음
     } catch (error) {
       console.error('로그인 실패:', error);
       setSelectedProvider(null);
@@ -69,30 +64,15 @@ const LoginPage: React.FC = () => {
             <p className='text-gray-600'>당신의 감정을 음악으로 표현하세요</p>
           </div>
 
-          {/* 로그인 방식 선택 */}
-          <div className='mb-6 flex justify-center space-x-4'>
-            <label className='flex items-center'>
-              <input
-                type='radio'
-                value='redirect'
-                checked={loginMethod === 'redirect'}
-                onChange={e => setLoginMethod(e.target.value as LoginMethod)}
-                className='mr-2'
-                disabled={loading}
-              />
-              <span className='text-sm'>리다이렉트</span>
-            </label>
-            <label className='flex items-center'>
-              <input
-                type='radio'
-                value='popup'
-                checked={loginMethod === 'popup'}
-                onChange={e => setLoginMethod(e.target.value as LoginMethod)}
-                className='mr-2'
-                disabled={loading}
-              />
-              <span className='text-sm'>팝업</span>
-            </label>
+          {/* 보안 안내 */}
+          <div className='mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4'>
+            <div className='mb-2 flex items-center gap-2'>
+              <i className='fas fa-shield-alt text-blue-600'></i>
+              <h3 className='font-semibold text-blue-800'>보안 강화된 로그인</h3>
+            </div>
+            <p className='text-sm text-blue-700'>
+              안전한 임시 토큰 방식을 사용하여 더욱 보안이 강화되었습니다.
+            </p>
           </div>
 
           {/* Login Options */}
@@ -145,6 +125,17 @@ const LoginPage: React.FC = () => {
               <li>
                 • <strong>Google</strong>: Google 계정으로 빠르게 로그인합니다
               </li>
+            </ul>
+          </div>
+
+          {/* Security Features */}
+          <div className='mt-6 rounded-xl border border-green-200 bg-green-50 p-4'>
+            <h3 className='mb-2 font-semibold text-green-800'>🛡️ 보안 기능</h3>
+            <ul className='space-y-1 text-sm text-green-700'>
+              <li>• HttpOnly 쿠키로 토큰 보호</li>
+              <li>• XSS 공격으로부터 안전</li>
+              <li>• 임시 토큰으로 안전한 인증</li>
+              <li>• 자동 토큰 갱신</li>
             </ul>
           </div>
 

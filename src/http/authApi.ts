@@ -22,3 +22,7 @@ export const getSocialLoginUrls = (): Promise<{ data: Record<string, string> }> 
 
 // 현재 사용자 소셜 계정 조회
 export const getCurrentUserSocialAccounts = () => apiClient.get(`${API_ENDPOINTS.AUTH}/me/social`);
+
+// SSO 토큰 클레임
+export const claimSsoTokens = (tokenId: string) =>
+  apiClient.post('/v1/sso/claim-tokens', { tokenId });
