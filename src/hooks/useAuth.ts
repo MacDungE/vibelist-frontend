@@ -1,5 +1,10 @@
 import { useContext, useEffect, useRef } from 'react';
 import { AuthContext } from '@/contexts/AuthContext';
+import {
+  useAuthStatus as useAuthStatusQuery,
+  useRefreshToken as useRefreshTokenMutation,
+  useLogout as useLogoutMutation,
+} from '@/queries';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -9,21 +14,30 @@ export const useAuth = () => {
   return context;
 };
 
-// 인증 상태만 필요한 경우
+// 인증 상태만 필요한 경우 (TanStack Query 사용)
 export function useAuthStatus() {
-  const { state } = useAuth();
+  const { data, isLoading, error } = useAuthStatusQuery();
+
   return {
-    isAuthenticated: state.isAuthenticated,
-    loading: state.loading,
-    user: state.user,
-    error: state.error,
+    isAuthenticated: data?.data?.authenticated ?? false,
+    loading: isLoading,
+    user: data?.data,
+    error: error,
   };
 }
 
 // 인증 액션만 필요한 경우
 export function useAuthActions() {
   const { login, logout, refreshToken, checkAuthStatus } = useAuth();
-  return { login, logout, refreshToken, checkAuthStatus };
+  const refreshTokenMutation = useRefreshTokenMutation();
+  const logoutMutation = useLogoutMutation();
+
+  return {
+    login,
+    logout: logoutMutation.mutate,
+    refreshToken: refreshTokenMutation.mutate,
+    checkAuthStatus,
+  };
 }
 
 // 주기적인 인증 상태 모니터링 (선택적 사용)

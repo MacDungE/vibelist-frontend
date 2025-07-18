@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import UserProfilePage from '@/pages/UserProfilePage';
 import { AuthProvider } from '@/contexts/AuthProvider.tsx';
 import { PostsProvider } from '@/contexts/PostsProvider.tsx';
+import { QueryProvider } from '@/contexts/QueryProvider';
 import { useAuthMonitor } from '@/hooks/useAuth';
 
 function useViewportHeightVar() {
@@ -139,11 +140,13 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <PostsProvider>
-        <AppContent />
-      </PostsProvider>
-    </AuthProvider>
+    <QueryProvider>
+      <AuthProvider>
+        <PostsProvider>
+          <AppContent />
+        </PostsProvider>
+      </AuthProvider>
+    </QueryProvider>
   );
 }
 
