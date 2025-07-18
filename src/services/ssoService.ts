@@ -47,12 +47,16 @@ class SSOService {
    * 인증 상태 확인
    */
   async getStatus(): Promise<SSOStatusResponse> {
+    console.log('SSOService: 인증 상태 확인 요청');
     try {
       const response = await apiClient.get('/v1/sso/status');
+      console.log('SSOService: 서버 응답 성공:', response.data);
       return response.data;
     } catch (error: any) {
+      console.log('SSOService: 서버 응답 실패:', error);
       // 401 에러는 인증되지 않은 상태를 의미하므로 정상적인 응답으로 처리
       if (error.response?.status === 401) {
+        console.log('SSOService: 401 에러 - 인증되지 않음으로 처리');
         return {
           authenticated: false,
           checkedAt: new Date().toISOString(),

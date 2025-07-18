@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useAuthStatus } from '@/hooks/useAuth';
 import LoginModal from './LoginModal';
 
 export type Track = {
@@ -51,17 +51,23 @@ interface CardComment {
   replies?: CardComment[];
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotifyModalUri, onLike }) => {
+const PostCard: React.FC<PostCardProps> = ({
+  post,
+  showAuthor = false,
+  setSpotifyModalUri,
+  onLike,
+}) => {
   const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMessage, setLoginModalMessage] = useState('');
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isAuthenticated } = useAuthStatus();
   const emotion = post.emotion || '무기력한 상태';
   const mood = post.mood || '반대 기분';
 
   const playlistLength = post.playlist?.length || 0;
-  const playlistCover = post.playlist?.[0]?.cover || 'https://i.scdn.co/image/ab67616d0000b27309a857d20020536deb494427';
+  const playlistCover =
+    post.playlist?.[0]?.cover || 'https://i.scdn.co/image/ab67616d0000b27309a857d20020536deb494427';
   const playlistArtist = post.playlist?.[0]?.artist || '';
   const [dominantColor, setDominantColor] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -72,9 +78,31 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
   const [commentInput, setCommentInput] = useState('');
   // mock 댓글 데이터 (실제는 props/context로 대체)
   const [comments, setComments] = useState<CardComment[]>([
-    { id: 1, postId: post.id, author: '재즈러버', authorUsername: 'jazzlover', content: '정말 감성적인 곡들이네요!', createdAt: '1일 전' },
-    { id: 2, postId: post.id, author: '음악러버', authorUsername: 'musiclover', content: '감사합니다! 새벽에 듣기 좋아요.', createdAt: '23시간 전', parentId: 1 },
-    { id: 3, postId: post.id, author: '운동러버', authorUsername: 'fituser', content: '운동할 때 에너지 UP!', createdAt: '2일 전' },
+    {
+      id: 1,
+      postId: post.id,
+      author: '재즈러버',
+      authorUsername: 'jazzlover',
+      content: '정말 감성적인 곡들이네요!',
+      createdAt: '1일 전',
+    },
+    {
+      id: 2,
+      postId: post.id,
+      author: '음악러버',
+      authorUsername: 'musiclover',
+      content: '감사합니다! 새벽에 듣기 좋아요.',
+      createdAt: '23시간 전',
+      parentId: 1,
+    },
+    {
+      id: 3,
+      postId: post.id,
+      author: '운동러버',
+      authorUsername: 'fituser',
+      content: '운동할 때 에너지 UP!',
+      createdAt: '2일 전',
+    },
   ]);
 
   // dominant color 추출 함수
@@ -86,9 +114,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
       // 중앙 1픽셀만 추출
-      ctx.drawImage(img, img.naturalWidth/2-0.5, img.naturalHeight/2-0.5, 1, 1, 0, 0, 1, 1);
+      ctx.drawImage(img, img.naturalWidth / 2 - 0.5, img.naturalHeight / 2 - 0.5, 1, 1, 0, 0, 1, 1);
       const data = ctx.getImageData(0, 0, 1, 1).data;
-      const r = data[0], g = data[1], b = data[2];
+      const r = data[0],
+        g = data[1],
+        b = data[2];
       return `rgb(${r},${g},${b})`;
     } catch {
       return null;
@@ -133,7 +163,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
 
   // 트리 구조 변환
   function buildCommentTree(comments: CardComment[]) {
-    const map = new Map<number, (CardComment & { replies: CardComment[] })>();
+    const map = new Map<number, CardComment & { replies: CardComment[] }>();
     comments.forEach(c => map.set(c.id, { ...c, replies: [] }));
     const roots: (CardComment & { replies: CardComment[] })[] = [];
     map.forEach(c => {
@@ -153,55 +183,79 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
     return parent ? parent.authorUsername : '';
   };
   // 아바타 유틸(임시)
-  const getAvatar = (username: string) => `https://readdy.ai/api/search-image?query=avatar%20${username}&width=32&height=32&seq=avatar&orientation=squarish`;
+  const getAvatar = (username: string) =>
+    `https://readdy.ai/api/search-image?query=avatar%20${username}&width=32&height=32&seq=avatar&orientation=squarish`;
 
   // 댓글/대댓글 렌더 함수
   const renderComments = (nodes: CardComment[], depth = 0) =>
     nodes.map(c => (
-      <div key={c.id} className={`flex gap-2 mb-3 ${depth > 0 ? 'ml-8 border-l-2 border-[var(--stroke)] pl-4' : ''}`}>
-        <img src={getAvatar(c.authorUsername)} className="w-8 h-8 rounded-full object-cover" />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="font-bold text-[var(--text-primary)] text-sm">{c.author}</span>
-            <span className="text-xs text-[var(--text-secondary)]">@{c.authorUsername}</span>
-            <span className="text-xs text-[var(--text-secondary)]">{c.createdAt}</span>
+      <div
+        key={c.id}
+        className={`mb-3 flex gap-2 ${depth > 0 ? 'ml-8 border-l-2 border-[var(--stroke)] pl-4' : ''}`}
+      >
+        <img src={getAvatar(c.authorUsername)} className='h-8 w-8 rounded-full object-cover' />
+        <div className='flex-1'>
+          <div className='mb-0.5 flex items-center gap-2'>
+            <span className='text-sm font-bold text-[var(--text-primary)]'>{c.author}</span>
+            <span className='text-xs text-[var(--text-secondary)]'>@{c.authorUsername}</span>
+            <span className='text-xs text-[var(--text-secondary)]'>{c.createdAt}</span>
           </div>
-          <div className="text-[15px] text-[var(--text-secondary)] whitespace-pre-line">
-            {c.parentId && <span className="text-[var(--primary)] font-semibold mr-1">@{getParentUsername(c.parentId)}</span>}
+          <div className='text-[15px] whitespace-pre-line text-[var(--text-secondary)]'>
+            {c.parentId && (
+              <span className='mr-1 font-semibold text-[var(--primary)]'>
+                @{getParentUsername(c.parentId)}
+              </span>
+            )}
             {c.content}
           </div>
-          <button className="text-xs text-[var(--primary)] mt-1" onClick={() => {
-            if (requireLogin('답글을 작성하려면 로그인이 필요합니다.')) return;
-            setReplyTo(c.id);
-          }}>답글</button>
+          <button
+            className='mt-1 text-xs text-[var(--primary)]'
+            onClick={() => {
+              if (requireLogin('답글을 작성하려면 로그인이 필요합니다.')) return;
+              setReplyTo(c.id);
+            }}
+          >
+            답글
+          </button>
           {/* 대댓글 입력창 */}
           {replyTo === c.id && (
-            <form className="flex gap-2 mt-2" onSubmit={e => {
-              e.preventDefault();
-              if (requireLogin('답글을 작성하려면 로그인이 필요합니다.')) return;
-              if (commentInput.trim()) {
-                setComments(prev => [...prev, {
-                  id: Date.now(),
-                  postId: post.id,
-                  author: '나',
-                  authorUsername: 'me',
-                  content: commentInput,
-                  createdAt: '방금 전',
-                  parentId: c.id
-                }]);
-                setCommentInput('');
-                setReplyTo(null);
-              }
-            }}>
+            <form
+              className='mt-2 flex gap-2'
+              onSubmit={e => {
+                e.preventDefault();
+                if (requireLogin('답글을 작성하려면 로그인이 필요합니다.')) return;
+                if (commentInput.trim()) {
+                  setComments(prev => [
+                    ...prev,
+                    {
+                      id: Date.now(),
+                      postId: post.id,
+                      author: '나',
+                      authorUsername: 'me',
+                      content: commentInput,
+                      createdAt: '방금 전',
+                      parentId: c.id,
+                    },
+                  ]);
+                  setCommentInput('');
+                  setReplyTo(null);
+                }
+              }}
+            >
               <input
-                className="flex-1 px-3 py-1 rounded-lg border border-gray-300 focus:outline-none text-gray-900 text-sm"
+                className='flex-1 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-900 focus:outline-none'
                 placeholder={`@${c.authorUsername}에게 답글 달기`}
                 value={commentInput}
                 onChange={e => setCommentInput(e.target.value)}
                 maxLength={200}
                 required
               />
-              <button type="submit" className="px-3 py-1 rounded-lg bg-[var(--primary)] text-white text-xs font-semibold">등록</button>
+              <button
+                type='submit'
+                className='rounded-lg bg-[var(--primary)] px-3 py-1 text-xs font-semibold text-white'
+              >
+                등록
+              </button>
             </form>
           )}
           {/* 대댓글 재귀 */}
@@ -212,7 +266,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
 
   // 로그인 필요 함수
   const requireLogin = (message: string) => {
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       setLoginModalMessage(message);
       setShowLoginModal(true);
       return true;
@@ -222,110 +276,179 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
 
   // 최상위 댓글 입력창
   const renderRootCommentInput = () => (
-    <form className="flex gap-2 mt-2" onSubmit={e => {
-      e.preventDefault();
-      if (requireLogin('댓글을 작성하려면 로그인이 필요합니다.')) return;
-      if (commentInput.trim()) {
-        setComments(prev => [...prev, {
-          id: Date.now(),
-          postId: post.id,
-          author: '나',
-          authorUsername: 'me',
-          content: commentInput,
-          createdAt: '방금 전'
-        }]);
-        setCommentInput('');
-      }
-    }}>
+    <form
+      className='mt-2 flex gap-2'
+      onSubmit={e => {
+        e.preventDefault();
+        if (requireLogin('댓글을 작성하려면 로그인이 필요합니다.')) return;
+        if (commentInput.trim()) {
+          setComments(prev => [
+            ...prev,
+            {
+              id: Date.now(),
+              postId: post.id,
+              author: '나',
+              authorUsername: 'me',
+              content: commentInput,
+              createdAt: '방금 전',
+            },
+          ]);
+          setCommentInput('');
+        }
+      }}
+    >
       <input
-        className="flex-1 px-3 py-1 rounded-lg border border-gray-300 focus:outline-none text-gray-900 text-sm"
-        placeholder="댓글을 입력하세요..."
+        className='flex-1 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-900 focus:outline-none'
+        placeholder='댓글을 입력하세요...'
         value={commentInput}
         onChange={e => setCommentInput(e.target.value)}
         maxLength={200}
         required
       />
-      <button type="submit" className="px-3 py-1 rounded-lg bg-[var(--primary)] text-white text-xs font-semibold">등록</button>
+      <button
+        type='submit'
+        className='rounded-lg bg-[var(--primary)] px-3 py-1 text-xs font-semibold text-white'
+      >
+        등록
+      </button>
     </form>
   );
 
   return (
-    <div className="rounded-[16px] p-5 mb-4 font-sans" style={{ background: 'var(--surface)', border: '1px solid var(--stroke)' }}>
+    <div
+      className='mb-4 rounded-[16px] p-5 font-sans'
+      style={{ background: 'var(--surface)', border: '1px solid var(--stroke)' }}
+    >
       {/* Header Section */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
+      <div className='mb-3 flex items-center justify-between'>
+        <div className='flex items-center gap-3'>
           <div
-            className="w-8 h-8 rounded-full overflow-hidden cursor-pointer"
+            className='h-8 w-8 cursor-pointer overflow-hidden rounded-full'
             style={{ background: 'var(--surface-alt)' }}
             onClick={handleAuthorClick}
           >
             <img
-              src={post.authorAvatar || "https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=32&height=32&seq=avatar1&orientation=squarish"}
-              alt=""
-              className="w-full h-full object-cover"
+              src={
+                post.authorAvatar ||
+                'https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=32&height=32&seq=avatar1&orientation=squarish'
+              }
+              alt=''
+              className='h-full w-full object-cover'
             />
           </div>
-          <div className="cursor-pointer" onClick={handleAuthorClick}>
-            <p className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>{showAuthor ? post.author || '@musiclover2024' : '@musiclover2024'}</p>
-            <p className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>{post.createdAt}</p>
+          <div className='cursor-pointer' onClick={handleAuthorClick}>
+            <p className='text-[15px] font-bold' style={{ color: 'var(--text-primary)' }}>
+              {showAuthor ? post.author || '@musiclover2024' : '@musiclover2024'}
+            </p>
+            <p className='text-[13px]' style={{ color: 'var(--text-secondary)' }}>
+              {post.createdAt}
+            </p>
           </div>
         </div>
         {post.isPrivate && (
-          <div className="px-2 py-1 rounded-full text-[12px] flex items-center gap-1" style={{ background: 'var(--surface-alt)', color: 'var(--text-secondary)' }}>
-            <i className="fas fa-lock text-xs"></i>
+          <div
+            className='flex items-center gap-1 rounded-full px-2 py-1 text-[12px]'
+            style={{ background: 'var(--surface-alt)', color: 'var(--text-secondary)' }}
+          >
+            <i className='fas fa-lock text-xs'></i>
             PRIVATE
           </div>
         )}
       </div>
       {/* Description */}
-      <p className="text-[15px] mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{post.description}</p>
+      <p className='mb-3 line-clamp-2 text-[15px]' style={{ color: 'var(--text-secondary)' }}>
+        {post.description}
+      </p>
       {/* Playlist Preview Section */}
       <div
-        className="rounded-[12px] px-4 py-3 mb-4 flex flex-col gap-2"
+        className='mb-4 flex flex-col gap-2 rounded-[12px] px-4 py-3'
         style={{ background: dominantColor || 'transparent', border: '1px solid var(--stroke)' }}
       >
-        <div className="flex flex-row gap-4 w-full items-center">
+        <div className='flex w-full flex-row items-center gap-4'>
           {/* 앨범(대표 트랙) 이미지 */}
           <img
-            alt="Playlist cover"
-            className="w-16 h-16 rounded-lg object-cover border border-[#E5E5E5]"
+            alt='Playlist cover'
+            className='h-16 w-16 rounded-lg border border-[#E5E5E5] object-cover'
             src={playlistCover}
             ref={imgRef}
-            crossOrigin="anonymous"
+            crossOrigin='anonymous'
           />
           {/* 우측 정보 */}
-          <div className="flex-1 flex flex-col justify-between min-w-0 h-full">
+          <div className='flex h-full min-w-0 flex-1 flex-col justify-between'>
             {/* 윗줄: 타이틀 + 태그들 오른쪽 */}
-            <div className="flex items-center justify-between min-w-0">
-              <span className="font-semibold truncate text-[15px]" style={{ color: getContrastTextColor(dominantColor) }}>{playlistArtist}</span>
-              <div className="flex gap-1">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'var(--primary)', color: getContrastTextColor(dominantColor), boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-                  <i className="fas fa-smile text-xs" style={{ color: getContrastTextColor(dominantColor) }}></i>
-                  <span className="text-[13px] font-semibold">{emotion}</span>
+            <div className='flex min-w-0 items-center justify-between'>
+              <span
+                className='truncate text-[15px] font-semibold'
+                style={{ color: getContrastTextColor(dominantColor) }}
+              >
+                {playlistArtist}
+              </span>
+              <div className='flex gap-1'>
+                <span
+                  className='inline-flex items-center gap-1.5 rounded-full px-2.5 py-1'
+                  style={{
+                    background: 'var(--primary)',
+                    color: getContrastTextColor(dominantColor),
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <i
+                    className='fas fa-smile text-xs'
+                    style={{ color: getContrastTextColor(dominantColor) }}
+                  ></i>
+                  <span className='text-[13px] font-semibold'>{emotion}</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'var(--primary)', color: getContrastTextColor(dominantColor), boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-                  <i className="fas fa-arrow-up text-xs" style={{ color: getContrastTextColor(dominantColor) }}></i>
-                  <span className="text-[13px] font-semibold">{mood}</span>
+                <span
+                  className='inline-flex items-center gap-1.5 rounded-full px-2.5 py-1'
+                  style={{
+                    background: 'var(--primary)',
+                    color: getContrastTextColor(dominantColor),
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <i
+                    className='fas fa-arrow-up text-xs'
+                    style={{ color: getContrastTextColor(dominantColor) }}
+                  ></i>
+                  <span className='text-[13px] font-semibold'>{mood}</span>
                 </span>
               </div>
             </div>
             {/* 아랫줄: 곡수 + 스포티파이 + 토글 오른쪽 */}
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-[13px]" style={{ color: getContrastTextColor(dominantColor) }}>외 {Math.max(0, playlistLength - 1)}곡</span>
-              <div className="flex items-center gap-2">
+            <div className='mt-2 flex items-center justify-between'>
+              <span className='text-[13px]' style={{ color: getContrastTextColor(dominantColor) }}>
+                외 {Math.max(0, playlistLength - 1)}곡
+              </span>
+              <div className='flex items-center gap-2'>
                 <button
-                  type="button"
+                  type='button'
                   onClick={() => post.spotifyUri && setSpotifyModalUri(post.spotifyUri)}
-                  className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-xs"
-                  style={{ background: 'var(--accent)', color: getContrastTextColor(dominantColor), height: '2rem', minWidth: 0 }}
+                  className='inline-flex items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold'
+                  style={{
+                    background: 'var(--accent)',
+                    color: getContrastTextColor(dominantColor),
+                    height: '2rem',
+                    minWidth: 0,
+                  }}
                 >
-                  <i className="fab fa-spotify text-[15px]" style={{ color: getContrastTextColor(dominantColor) }}></i>
+                  <i
+                    className='fab fa-spotify text-[15px]'
+                    style={{ color: getContrastTextColor(dominantColor) }}
+                  ></i>
                   스포티파이로 듣기
                 </button>
                 <button
-                  onClick={e => { e.stopPropagation(); setIsPlaylistExpanded(v => !v); }}
-                  className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs"
-                  style={{ background: 'var(--surface)', color: getContrastTextColor(dominantColor), height: '2rem', minWidth: 0 }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    setIsPlaylistExpanded(v => !v);
+                  }}
+                  className='inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs'
+                  style={{
+                    background: 'var(--surface)',
+                    color: getContrastTextColor(dominantColor),
+                    height: '2rem',
+                    minWidth: 0,
+                  }}
                   aria-label={isPlaylistExpanded ? '플레이리스트 닫기' : '플레이리스트 열기'}
                 >
                   <i className={`fas fa-chevron-${isPlaylistExpanded ? 'up' : 'down'}`}></i>
@@ -336,22 +459,24 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
         </div>
         {isPlaylistExpanded && (
           <div
-            className="mt-3 pt-3 max-h-56 overflow-y-auto"
+            className='mt-3 max-h-56 overflow-y-auto pt-3'
             style={{
               background: dominantColor || 'transparent',
               borderRadius: 12,
-              borderTop: `1.5px solid ${getContrastTextColor(dominantColor) === '#fff' ? 'rgba(255,255,255,0.3)' : '#bbb'}`
+              borderTop: `1.5px solid ${getContrastTextColor(dominantColor) === '#fff' ? 'rgba(255,255,255,0.3)' : '#bbb'}`,
             }}
           >
-            <ul style={{
-              borderTop: 'none',
-              borderRadius: 12,
-            }}>
+            <ul
+              style={{
+                borderTop: 'none',
+                borderRadius: 12,
+              }}
+            >
               {post.playlist && post.playlist.length > 0 ? (
                 post.playlist.map((track, idx) => (
                   <li
                     key={track.id}
-                    className="py-2 flex items-center gap-3"
+                    className='flex items-center gap-3 py-2'
                     style={{
                       borderBottom:
                         idx !== post.playlist.length - 1
@@ -362,54 +487,73 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
                     <img
                       src={track.cover || playlistCover}
                       alt={track.artist}
-                      className="w-10 h-10 rounded-[6px] object-cover shrink-0 border border-[#E5E5E5]"
+                      className='h-10 w-10 shrink-0 rounded-[6px] border border-[#E5E5E5] object-cover'
                     />
-                    <span className="flex-1 truncate font-medium text-[15px]"
-                      style={{ color: getContrastTextColor(dominantColor) }}>{track.artist}</span>
-                    <span className="text-[13px] ml-2"
-                      style={{ color: getContrastTextColor(dominantColor) }}>{track.duration}</span>
+                    <span
+                      className='flex-1 truncate text-[15px] font-medium'
+                      style={{ color: getContrastTextColor(dominantColor) }}
+                    >
+                      {track.artist}
+                    </span>
+                    <span
+                      className='ml-2 text-[13px]'
+                      style={{ color: getContrastTextColor(dominantColor) }}
+                    >
+                      {track.duration}
+                    </span>
                   </li>
                 ))
               ) : (
-                <li className="py-2 text-[14px]" style={{ color: getContrastTextColor(dominantColor) }}>트랙 리스트가 없습니다.</li>
+                <li
+                  className='py-2 text-[14px]'
+                  style={{ color: getContrastTextColor(dominantColor) }}
+                >
+                  트랙 리스트가 없습니다.
+                </li>
               )}
             </ul>
           </div>
         )}
       </div>
       {/* Footer Actions */}
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-4">
+      <div className='mt-2 flex items-center justify-between'>
+        <div className='flex items-center gap-4'>
           <button
-            className="flex items-center gap-2 text-[17px] font-semibold text-[var(--primary)] hover:scale-110 transition-transform"
+            className='flex items-center gap-2 text-[17px] font-semibold text-[var(--primary)] transition-transform hover:scale-110'
             onClick={() => {
               if (requireLogin('좋아요를 누르려면 로그인이 필요합니다.')) return;
               onLike?.();
             }}
-            aria-label="좋아요"
+            aria-label='좋아요'
             style={{ minWidth: 48 }}
           >
-            <i className="fas fa-heart" style={{ color: post.likes > 0 ? 'var(--accent)' : 'var(--stroke)', filter: post.likes > 0 ? 'drop-shadow(0 0 2px var(--accent))' : 'none' }}></i>
+            <i
+              className='fas fa-heart'
+              style={{
+                color: post.likes > 0 ? 'var(--accent)' : 'var(--stroke)',
+                filter: post.likes > 0 ? 'drop-shadow(0 0 2px var(--accent))' : 'none',
+              }}
+            ></i>
             <span>{post.likes}</span>
           </button>
           <button
-            className="flex items-center gap-2 text-[#888] text-[15px]"
+            className='flex items-center gap-2 text-[15px] text-[#888]'
             onClick={() => {
               if (requireLogin('댓글을 보려면 로그인이 필요합니다.')) return;
               setShowComments(v => !v);
             }}
           >
-            <i className="fas fa-comment"></i>
+            <i className='fas fa-comment'></i>
             <span>{comments.length}</span>
           </button>
-          <button className="flex items-center gap-2 text-[#888] text-[15px]">
-            <i className="fas fa-share"></i>
+          <button className='flex items-center gap-2 text-[15px] text-[#888]'>
+            <i className='fas fa-share'></i>
           </button>
         </div>
       </div>
       {/* 댓글/대댓글 트리 */}
       {showComments && (
-        <div className="mt-4 border-t border-[var(--stroke)] pt-4">
+        <div className='mt-4 border-t border-[var(--stroke)] pt-4'>
           {renderComments(commentTree)}
           {renderRootCommentInput()}
         </div>
@@ -424,4 +568,4 @@ const PostCard: React.FC<PostCardProps> = ({ post, showAuthor = false, setSpotif
   );
 };
 
-export default PostCard; 
+export default PostCard;

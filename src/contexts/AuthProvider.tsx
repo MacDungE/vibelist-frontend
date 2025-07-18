@@ -77,10 +77,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     isCheckingRef.current = true;
+    console.log('AuthProvider: 인증 상태 확인 시작, isInitial:', isInitial);
+
     try {
       // 초기 체크일 때는 loading 상태를 변경하지 않음
       dispatch({ type: isInitial ? 'AUTH_INITIAL_CHECK' : 'AUTH_START' });
       const status = await ssoService.getStatus();
+
+      console.log('AuthProvider: 서버 응답:', status);
 
       if (status.authenticated && status.userId) {
         const user: User = {
@@ -90,16 +94,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: status.name || '',
           provider: status.provider || 'jwt',
         };
+        console.log('AuthProvider: 인증 성공, 사용자:', user);
         dispatch({ type: 'AUTH_SUCCESS', payload: user });
       } else {
+        console.log('AuthProvider: 인증 실패, 상태:', status);
         dispatch({ type: 'AUTH_FAILURE', payload: isInitial ? '' : '인증되지 않았습니다.' });
       }
     } catch (error: any) {
-      console.error('인증 상태 확인 중 오류:', error);
+      console.error('AuthProvider: 인증 상태 확인 중 오류:', error);
 
       // 401 에러는 정상적인 "인증되지 않음" 상태
       if (error.response?.status === 401) {
+        console.log('AuthProvider: 401 에러 - 인증되지 않음');
         dispatch({ type: 'AUTH_FAILURE', payload: '' });
+        return;
+      }
+
+      // 네트워크 에러나 기타 서버 에러
+      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        console.log('AuthProvider: 네트워크 에러 - 현재 상태 유지');
+        // 네트워크 에러 시에는 현재 상태를 유지하고 에러만 표시하지 않음
+        if (!isInitial) {
+          dispatch({ type: 'AUTH_FAILURE', payload: '' });
+        }
         return;
       }
 
@@ -162,6 +179,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value: AuthContextType = {
     state,
+    user: state.user,
+    loginProvider: state.user?.provider || 'unknown',
     checkAuthStatus,
     login,
     logout,
