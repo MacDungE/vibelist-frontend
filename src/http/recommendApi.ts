@@ -4,4 +4,4 @@ import type { RecommendRqDto, TrackRsDto } from '@/types/api';
 
 // 감정 기반 트랙 추천
 export const getRecommendations = (data: RecommendRqDto): Promise<{ data: TrackRsDto }> =>
-  apiClient.post(API_ENDPOINTS.RECOMMEND, data);
+  apiClient.post(API_ENDPOINTS.RECOMMEND.BASE, data);

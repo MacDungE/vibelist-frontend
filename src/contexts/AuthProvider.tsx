@@ -20,7 +20,7 @@ type AuthAction =
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
-  loading: true,
+  loading: true, // 초기 로딩 상태
   error: null,
 };
 
@@ -31,7 +31,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
       return { ...state, loading: true, error: null };
     case 'AUTH_INITIAL_CHECK':
       // 초기 인증 상태 확인 시에는 loading 상태를 유지하되 error는 클리어
-      return { ...state, error: null };
+      return { ...state, loading: true, error: null };
     case 'AUTH_SUCCESS':
       return {
         ...state,
@@ -175,7 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       hasMountedRef.current = true;
       checkAuthStatus(true);
     }
-  }, []);
+  }, [checkAuthStatus]);
 
   const value: AuthContextType = {
     state,

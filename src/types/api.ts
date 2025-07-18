@@ -22,8 +22,9 @@ export interface TrackRsDto {
 
 // 추천 요청
 export interface RecommendRqDto {
-  userValence: number;
-  userEnergy: number;
+  userValence?: number;
+  userEnergy?: number;
+  text?: string;
   mode: 'MAINTAIN' | 'ELEVATE' | 'CALM_DOWN' | 'REVERSE';
 }
 
@@ -60,6 +61,50 @@ export interface PostDetailResponse {
   createdAt: string;
   updatedAt: string;
   playlist: PlaylistDetailResponse;
+}
+
+// 페이지네이션 관련
+export interface SortObject {
+  empty: boolean;
+  unsorted: boolean;
+  sorted: boolean;
+}
+
+export interface PageableObject {
+  offset: number;
+  sort: SortObject;
+  unpaged: boolean;
+  paged: boolean;
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface PagePostDetailResponse {
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  content: PostDetailResponse[];
+  number: number;
+  sort: SortObject;
+  first: boolean;
+  last: boolean;
+  pageable: PageableObject;
+  numberOfElements: number;
+  empty: boolean;
+}
+
+// 트렌드 관련
+export interface TrendResponse {
+  postId: number;
+  score: number;
+  rank: number;
+  previousRank: number;
+  trendStatus: 'UP' | 'DOWN' | 'NEW' | 'SAME' | 'OUT';
+  rankChange: number;
+  postContent: string;
+  userName: string;
+  userProfileName: string;
+  snapshotTime: string;
 }
 
 // 댓글 관련
@@ -113,6 +158,16 @@ export interface StatusResponse {
   provider?: string;
   email?: string;
   name?: string;
+}
+
+export interface SSOStatusResponse {
+  authenticated: boolean;
+  userId: number;
+  username: string;
+  email: string;
+  name: string;
+  provider: string;
+  checkedAt: string;
 }
 
 // 외부 서비스 연동 관련

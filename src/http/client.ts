@@ -61,11 +61,16 @@ apiClient.interceptors.response.use(
       // refresh 토큰 API 호출 자체가 401이면 바로 리다이렉트
       // 또는 status 확인 API는 인증되지 않은 상태에서도 정상적으로 호출 가능
       if (
-        originalRequest.url?.includes('/v1/sso/refresh') ||
-        originalRequest.url?.includes('/v1/sso/status')
+        originalRequest.url?.includes(API_ENDPOINTS.SSO.REFRESH) ||
+        originalRequest.url?.includes(API_ENDPOINTS.SSO.STATUS) ||
+        originalRequest.url?.includes(API_ENDPOINTS.AUTH.REFRESH) ||
+        originalRequest.url?.includes(API_ENDPOINTS.AUTH.STATUS)
       ) {
         // 토큰 재발급 실패 또는 status 확인 - 바로 에러 반환
-        if (originalRequest.url?.includes('/v1/sso/status')) {
+        if (
+          originalRequest.url?.includes(API_ENDPOINTS.SSO.STATUS) ||
+          originalRequest.url?.includes(API_ENDPOINTS.AUTH.STATUS)
+        ) {
           return Promise.reject(error);
         }
         // refresh 실패는 로그인 페이지로 리다이렉트
@@ -93,8 +98,13 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // SSO refresh 토큰으로 새 access 토큰 발급
-        await apiClient.post('/v1/sso/refresh');
+        // SSO 또는 일반 auth refresh 토큰으로 새 access 토큰 발급
+        try {
+          await apiClient.post(API_ENDPOINTS.SSO.REFRESH);
+        } catch (ssoError) {
+          // SSO refresh 실패시 일반 auth refresh 시도
+          await apiClient.post(API_ENDPOINTS.AUTH.REFRESH);
+        }
 
         // 토큰 재발급 성공
         processQueue(null);

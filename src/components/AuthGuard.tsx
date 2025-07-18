@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuthStatus, useAuthActions } from '@/hooks/useAuth';
 import { Navigate, useLocation } from 'react-router-dom';
 
@@ -16,57 +16,43 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   const { isAuthenticated, loading } = useAuthStatus();
   const { checkAuthStatus } = useAuthActions();
   const location = useLocation();
-  const lastCheckRef = useRef<number>(0);
-  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const hasCheckedRef = useRef(false);
 
-  // 페이지 이동 시마다 인증 상태 확인 (디바운싱 적용)
+  // 초기 인증 상태 확인 (한 번만)
   useEffect(() => {
-    const verifyAuthStatus = async () => {
+    const initializeAuth = async () => {
+      if (hasCheckedRef.current) return;
+
+      hasCheckedRef.current = true;
       try {
         await checkAuthStatus();
-        lastCheckRef.current = Date.now();
       } catch (error) {
-        console.error('AuthGuard: 인증 상태 확인 실패:', error);
+        console.error('AuthGuard: 초기 인증 상태 확인 실패:', error);
+      } finally {
+        setIsInitialized(true);
       }
     };
 
-    // 이전 체크로부터 2초가 지나지 않았으면 스킵 (디바운싱)
-    const timeSinceLastCheck = Date.now() - lastCheckRef.current;
-    if (timeSinceLastCheck < 2000) {
-      console.log('AuthGuard: 최근에 상태를 확인했으므로 스킵');
-      return;
+    // 로딩이 완료되면 초기화 완료로 간주
+    if (!loading && !isInitialized) {
+      setIsInitialized(true);
+    } else if (loading && !hasCheckedRef.current) {
+      initializeAuth();
     }
-
-    // 로딩 중이 아닐 때만 상태 확인 (중복 호출 방지)
-    if (!loading) {
-      // 기존 타이머가 있으면 클리어
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-
-      // 300ms 디바운싱
-      checkTimeoutRef.current = setTimeout(() => {
-        verifyAuthStatus();
-      }, 300);
-    }
-
-    // 클린업 함수
-    return () => {
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-    };
-  }, [location.pathname, checkAuthStatus, loading]);
+  }, [loading, checkAuthStatus, isInitialized]);
 
   // 디버깅을 위한 로그
   console.log('AuthGuard Debug:', {
     requireAuth,
     isAuthenticated,
     loading,
+    isInitialized,
     currentPath: location.pathname,
   });
 
-  if (loading) {
+  // 초기화가 완료되지 않았으면 로딩 화면 표시
+  if (!isInitialized || loading) {
     return (
       <div
         className='flex min-h-screen w-full items-center justify-center font-sans'
