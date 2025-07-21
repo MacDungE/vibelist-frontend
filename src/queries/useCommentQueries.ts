@@ -51,7 +51,6 @@ export const useUpdateComment = () => {
       id,
       data,
       details,
-      postId,
     }: {
       id: number;
       data: CommentUpdateDto;
@@ -74,7 +73,7 @@ export const useDeleteComment = () => {
   return useMutation({
     mutationFn: ({ id, details }: { id: number; details: CustomUserDetails }) =>
       commentApi.deleteComment(id, details),
-    onSuccess: (_, { id }) => {
+    onSuccess: () => {
       // 댓글 삭제 후 모든 게시글의 댓글 목록 무효화
       // (postId를 알 수 없으므로 모든 댓글 쿼리 무효화)
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });

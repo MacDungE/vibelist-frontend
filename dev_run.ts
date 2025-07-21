@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
-import { spawn, exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
-import * as fs from 'fs';
-import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -14,8 +12,8 @@ interface ProcessInfo {
 
 class DevRunner {
   private processes: ProcessInfo[] = [];
-  private caddyProcess: any = null;
-  private viteProcess: any = null;
+  private caddyProcess: ReturnType<typeof spawn> | null = null;
+  private viteProcess: ReturnType<typeof spawn> | null = null;
 
   constructor() {
     // 프로세스 종료 시 정리
@@ -29,7 +27,7 @@ class DevRunner {
       await execAsync('which caddy');
       console.log('✅ Caddy가 설치되어 있습니다.');
       return true;
-    } catch (error) {
+    } catch {
       console.error('❌ Caddy가 설치되어 있지 않습니다.');
       console.log('📦 설치 방법:');
       console.log('   macOS: brew install caddy');
@@ -48,7 +46,7 @@ class DevRunner {
         await execAsync(`curl -k -s -o /dev/null -w "%{http_code}" ${url}`);
         console.log(`✅ ${url} 서버가 준비되었습니다.`);
         return true;
-      } catch (error) {
+      } catch {
         // 1초 대기 후 다시 시도
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -139,7 +137,7 @@ class DevRunner {
     try {
       await execAsync('pkill -f "caddy run"');
       console.log('✅ 남은 Caddy 프로세스를 정리했습니다.');
-    } catch (error) {
+    } catch {
       // 프로세스가 없으면 무시
     }
 

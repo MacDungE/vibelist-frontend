@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, useAuthStatus } from '@/hooks/useAuth';
+import { useAuthStatus } from '@/hooks/useAuth';
 import LoginModal from './LoginModal';
 
 export type Track = {

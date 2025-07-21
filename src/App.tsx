@@ -71,23 +71,9 @@ function App() {
               } 
             /> */}
 
-            {/* 보호된 경로 (인증 필수) */}
-            <Route
-              path='/'
-              element={
-                <AuthGuard>
-                  <HomePage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path='/explore'
-              element={
-                <AuthGuard>
-                  <ExplorePage />
-                </AuthGuard>
-              }
-            />
+            {/* 공개 경로 - 로그인 없이 접근 가능 */}
+            <Route path='/' element={<HomePage />} />
+            <Route path='/explore' element={<ExplorePage />} />
             <Route
               path='/create'
               element={

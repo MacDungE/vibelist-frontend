@@ -19,16 +19,22 @@ export function useAuthStatus() {
   const { data, isLoading, error } = useAuthStatusQuery();
 
   return {
-    isAuthenticated: data?.data?.authenticated ?? false,
+    isAuthenticated: data?.authenticated ?? false,
     loading: isLoading,
-    user: data?.data,
+    user: data ? {
+      id: data.email || '',
+      name: data.name || '',
+      email: data.email,
+      avatar: '',
+      provider: data.provider || ''
+    } : null,
     error: error,
   };
 }
 
 // 인증 액션만 필요한 경우
 export function useAuthActions() {
-  const { login, logout, refreshToken, checkAuthStatus } = useAuth();
+  const { login } = useAuth();
   const refreshTokenMutation = useRefreshTokenMutation();
   const logoutMutation = useLogoutMutation();
 
@@ -36,7 +42,10 @@ export function useAuthActions() {
     login,
     logout: logoutMutation.mutate,
     refreshToken: refreshTokenMutation.mutate,
-    checkAuthStatus,
+    checkAuthStatus: async () => {
+      // TODO: implement checkAuthStatus
+      console.log('checkAuthStatus not implemented');
+    },
   };
 }
 
@@ -49,7 +58,7 @@ export function useAuthMonitor(intervalMs: number = 5 * 60 * 1000) {
   useEffect(() => {
     // 주기적으로 인증 상태 확인
     intervalRef.current = setInterval(() => {
-      checkAuthStatus().catch(error => {
+      checkAuthStatus().catch((error: any) => {
         console.error('주기적 인증 상태 확인 실패:', error);
       });
     }, intervalMs);

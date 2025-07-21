@@ -24,6 +24,7 @@ axiosInstance.interceptors.request.use(
 );
 
 let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
 let failedQueue: ((token: string) => void)[] = [];
 
 const processQueue = (error: Error | null, token: string | null = null) => {
@@ -57,26 +58,38 @@ axiosInstance.interceptors.response.use(
       }
 
       originalRequest._retry = true;
-      isRefreshing = true;
+      
+      // 이미 갱신 중인 경우 기존 Promise 반환
+      if (!refreshPromise) {
+        isRefreshing = true;
+        refreshPromise = refreshAuthToken()
+          .then(response => {
+            const newAccessToken = response.data.accessToken;
+            authStorageService.setAccessToken(newAccessToken);
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+            processQueue(null, newAccessToken);
+            return newAccessToken;
+          })
+          .catch(refreshError => {
+            processQueue(refreshError as Error, null);
+            authStorageService.clear();
+            window.location.href = '/login';
+            throw refreshError;
+          })
+          .finally(() => {
+            isRefreshing = false;
+            refreshPromise = null;
+          });
+      }
 
       try {
-        const response = await refreshAuthToken();
-        const newAccessToken = response.data.accessToken; // 실제 API 응답에 맞춰 수정
-
-        authStorageService.setAccessToken(newAccessToken);
-        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+        const newAccessToken = await refreshPromise;
         if (originalRequest.headers) {
           originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
         }
-        processQueue(null, newAccessToken);
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError as Error, null);
-        authStorageService.clear();
-        window.location.href = '/login';
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
 
