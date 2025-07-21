@@ -25,6 +25,9 @@ export * from './integrationApi';
 // 시스템 상태
 export * from './systemApi';
 
-// 기존 API들
+// Explore (검색, 트렌드, 피드)
+export * from './exploreApi';
+
+// 기존 API들 (API 문서에 없는 엔드포인트들)
 export * from './emotionApi';
 export * from './moodApi';

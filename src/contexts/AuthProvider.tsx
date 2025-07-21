@@ -1,71 +1,51 @@
-import React, {type ReactNode, useEffect, useState} from "react";
-import {AuthContext, type AuthContextType} from "@/contexts/AuthContext.tsx";
-import type {User} from "@/types/user.tsx";
+import React, { useState, useCallback, useEffect, type ReactNode } from 'react';
+import { AuthContext, type AuthContextType, type User } from '@/contexts/AuthContext';
+import apiClient from '@/http/client';
+import { authStorageService } from '@/services/authStorageService';
+
 interface AuthProviderProps {
-    children: ReactNode;
+  children: ReactNode;
 }
-export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
-    const [loginProvider, setLoginProvider] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        // Check for existing login state on app load
-        const checkAuthState = () => {
-            const storedLoginState = localStorage.getItem('isLoggedIn');
-            const storedUserData = localStorage.getItem('userData');
-            const storedProvider = localStorage.getItem('loginProvider');
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [accessToken, setAccessToken] = useState<string | null>(
+    authStorageService.getAccessToken()
+  );
+  const [user, setUser] = useState<User | null>(authStorageService.getUser());
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-            if (storedLoginState === 'true' && storedUserData) {
-                try {
-                    const userData = JSON.parse(storedUserData);
-                    setIsLoggedIn(true);
-                    setUser(userData);
-                    setLoginProvider(storedProvider);
-                } catch (error) {
-                    console.error('Error parsing user data:', error);
-                    logout();
-                }
-            }
-            setLoading(false);
-        };
+  useEffect(() => {
+    setIsLoading(false);
+  }, []);
 
-        checkAuthState();
-    }, []);
+  const login = (newAccessToken: string, newUser: User) => {
+    authStorageService.setAccessToken(newAccessToken);
+    authStorageService.setUser(newUser);
+    setAccessToken(newAccessToken);
+    setUser(newUser);
+  };
 
-    const login = (provider: string, userData: User) => {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('loginProvider', provider);
-        localStorage.setItem('userData', JSON.stringify(userData));
+  const logout = useCallback(async () => {
+    authStorageService.clear();
+    setAccessToken(null);
+    setUser(null);
+    try {
+      await apiClient.post('/v1/auth/logout');
+    } catch (error) {
+      console.error('로그아웃 요청 실패:', error);
+    }
+  }, []);
 
-        setIsLoggedIn(true);
-        setUser(userData);
-        setLoginProvider(provider);
-    };
+  const isAuthenticated = !!accessToken;
 
-    const logout = () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('loginProvider');
-        localStorage.removeItem('userData');
+  const value: AuthContextType = {
+    isAuthenticated,
+    accessToken,
+    user,
+    login,
+    logout,
+    isLoading,
+  };
 
-        setIsLoggedIn(false);
-        setUser(null);
-        setLoginProvider(null);
-    };
-
-    const value: AuthContextType = {
-        isLoggedIn,
-        user,
-        loginProvider,
-        login,
-        logout,
-        loading
-    };
-
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
