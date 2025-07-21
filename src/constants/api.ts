@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
   // 인증 관련
   AUTH: {
     BASE: '/v1/auth',
+    SOCIAL_CALLBACK: '/v1/auth/social-login/callback',
     SOCIAL_COMPLETE_SIGNUP: '/v1/auth/social/complete-signup',
     REFRESH: '/v1/auth/refresh',
     LOGOUT: '/v1/auth/logout',

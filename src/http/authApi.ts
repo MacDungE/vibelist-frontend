@@ -1,6 +1,20 @@
 import apiClient from './client';
 import { API_ENDPOINTS } from '@/constants/api';
-import type { StatusResponse, SSOStatusResponse, CompleteSocialSignupRequest } from '@/types/api';
+import type {
+  StatusResponse,
+  SSOStatusResponse,
+  CompleteSocialSignupRequest,
+  SocialLoginCallbackResponse,
+} from '@/types/api';
+
+// 소셜 로그인 콜백
+export const socialLoginCallback = (token: string) => {
+  return apiClient.get<SocialLoginCallbackResponse>(API_ENDPOINTS.AUTH.SOCIAL_CALLBACK, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
 
 // 소셜 회원가입 완료
 export const completeSocialSignup = (data: CompleteSocialSignupRequest) =>

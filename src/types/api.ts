@@ -147,6 +147,10 @@ export interface UpdateUserProfileRequest {
 }
 
 // 인증 관련
+export interface SocialLoginCallbackResponse {
+  accessToken: string;
+}
+
 export interface CompleteSocialSignupRequest {
   username: string;
   provider: string;
