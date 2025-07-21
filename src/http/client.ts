@@ -1,132 +1,87 @@
-import axios from 'axios';
-import { API_BASE_URL, API_TIMEOUT, API_ENDPOINTS } from '@/constants/api';
+import axios, { type AxiosRequestConfig } from 'axios';
+import { refreshToken as refreshAuthToken } from './authApi';
+import { authStorageService } from '@/services/authStorageService';
 
-// axios 전역 설정
-axios.defaults.withCredentials = true;
+const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  withCredentials: true, // 쿠키 전송을 위해 필수!
+});
 
-// 토큰 재발급 중인지 확인하는 플래그
+// Access Token을 헤더에 추가하는 인터셉터
+axiosInstance.interceptors.request.use(
+  config => {
+    try {
+      const accessToken = authStorageService.getAccessToken();
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken.replace(/"/g, '')}`;
+      }
+    } catch (e) {
+      console.error('세션 스토리지에서 accessToken을 가져오는 데 실패했습니다.', e);
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
+
 let isRefreshing = false;
-// 토큰 재발급 대기 중인 요청들을 저장하는 큐
-let failedQueue: Array<{
-  resolve: (value?: unknown) => void;
-  reject: (reason?: any) => void;
-}> = [];
+let failedQueue: ((token: string) => void)[] = [];
 
-// 대기 중인 요청들을 처리하는 함수
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(({ resolve, reject }) => {
+const processQueue = (error: Error | null, token: string | null = null) => {
+  failedQueue.forEach(prom => {
     if (error) {
-      reject(error);
+      prom(token as never);
     } else {
-      resolve(token);
+      prom(token as string);
     }
   });
 
   failedQueue = [];
 };
 
-// axios 인스턴스 생성
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: API_TIMEOUT,
-  withCredentials: true, // HttpOnly 쿠키 사용을 위해 필수
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 요청 인터셉터
-apiClient.interceptors.request.use(
-  config => {
-    console.log('🚀 API 요청:', config.method?.toUpperCase(), config.url);
-    return config;
-  },
-  error => {
-    console.error('❌ API 요청 에러:', error);
-    return Promise.reject(error);
-  }
-);
-
-// 응답 인터셉터 (토큰 만료 처리)
-apiClient.interceptors.response.use(
-  response => {
-    console.log('✅ API 응답:', response.status, response.config.url);
-    return response;
-  },
+// 응답 인터셉터 추가
+axiosInstance.interceptors.response.use(
+  response => response,
   async error => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    // 401 에러이고 아직 재시도하지 않은 요청인 경우
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // refresh 토큰 API 호출 자체가 401이면 바로 리다이렉트
-      // 또는 status 확인 API는 인증되지 않은 상태에서도 정상적으로 호출 가능
-      if (
-        originalRequest.url?.includes(API_ENDPOINTS.SSO.REFRESH) ||
-        originalRequest.url?.includes(API_ENDPOINTS.SSO.STATUS) ||
-        originalRequest.url?.includes(API_ENDPOINTS.AUTH.REFRESH) ||
-        originalRequest.url?.includes(API_ENDPOINTS.AUTH.STATUS)
-      ) {
-        // 토큰 재발급 실패 또는 status 확인 - 바로 에러 반환
-        if (
-          originalRequest.url?.includes(API_ENDPOINTS.SSO.STATUS) ||
-          originalRequest.url?.includes(API_ENDPOINTS.AUTH.STATUS)
-        ) {
-          return Promise.reject(error);
-        }
-        // refresh 실패는 로그인 페이지로 리다이렉트
-        console.error('토큰 갱신 실패:', error);
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
-      // 이미 토큰 재발급 중이면 대기열에 추가
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(() => {
-            // 토큰 재발급 완료 후 원래 요청 재시도
-            originalRequest._retry = true;
-            return apiClient(originalRequest);
-          })
-          .catch(err => {
-            return Promise.reject(err);
+        return new Promise(function (resolve) {
+          failedQueue.push(token => {
+            if (originalRequest.headers) {
+              originalRequest.headers['Authorization'] = 'Bearer ' + token;
+            }
+            resolve(axiosInstance(originalRequest));
           });
+        });
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        // SSO 또는 일반 auth refresh 토큰으로 새 access 토큰 발급
-        try {
-          await apiClient.post(API_ENDPOINTS.SSO.REFRESH);
-        } catch (ssoError) {
-          // SSO refresh 실패시 일반 auth refresh 시도
-          await apiClient.post(API_ENDPOINTS.AUTH.REFRESH);
+        const response = await refreshAuthToken();
+        const newAccessToken = response.data.accessToken; // 실제 API 응답에 맞춰 수정
+
+        authStorageService.setAccessToken(newAccessToken);
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+        if (originalRequest.headers) {
+          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
         }
-
-        // 토큰 재발급 성공
-        processQueue(null);
-        isRefreshing = false;
-
-        // 원래 요청 재시도
-        return apiClient(originalRequest);
+        processQueue(null, newAccessToken);
+        return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // 토큰 재발급 실패
-        processQueue(refreshError);
-        isRefreshing = false;
-
-        // 로그인 페이지로 리다이렉트
-        console.error('토큰 갱신 실패:', refreshError);
+        processQueue(refreshError as Error, null);
+        authStorageService.clear();
         window.location.href = '/login';
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
-    console.error('❌ API 응답 에러:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
 );
 
-export default apiClient;
+export default axiosInstance;

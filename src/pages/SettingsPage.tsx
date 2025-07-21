@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext'; // 경로 수정
+import { getProviderDetails } from '@/constants/provider'; // 상수 임포트
 
 interface SpotifyConnection {
   isConnected: boolean;
@@ -10,9 +11,9 @@ interface SpotifyConnection {
 
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loginProvider, logout } = useAuth();
+  const { user, logout } = useAuth(); // loginProvider 제거
   const [spotifyConnection, setSpotifyConnection] = useState<SpotifyConnection>({
-    isConnected: loginProvider === 'spotify',
+    isConnected: user?.provider === 'spotify', // user.provider로 변경
     accountType: 'premium',
     username: user?.name,
   });
@@ -32,6 +33,8 @@ const SettingsPage: React.FC = () => {
 
   const handleLogout = () => {
     logout();
+    // AuthGuard가 자동으로 리디렉션 처리하므로 navigate 호출은 선택사항.
+    // 명시적으로 처리하고 싶다면 유지할 수 있습니다.
     navigate('/login');
   };
 
@@ -40,45 +43,6 @@ const SettingsPage: React.FC = () => {
     setShowDeleteModal(false);
     logout();
     navigate('/login');
-  };
-
-  const getProviderDisplayName = (provider: string) => {
-    switch (provider) {
-      case 'spotify':
-        return 'Spotify';
-      case 'kakao':
-        return '카카오';
-      case 'google':
-        return 'Google';
-      default:
-        return provider;
-    }
-  };
-
-  const getProviderIcon = (provider: string) => {
-    switch (provider) {
-      case 'spotify':
-        return 'fab fa-spotify';
-      case 'kakao':
-        return 'fas fa-comment';
-      case 'google':
-        return 'fab fa-google';
-      default:
-        return 'fas fa-user';
-    }
-  };
-
-  const getProviderColor = (provider: string) => {
-    switch (provider) {
-      case 'spotify':
-        return 'bg-green-50 text-green-700';
-      case 'kakao':
-        return 'bg-yellow-50 text-yellow-700';
-      case 'google':
-        return 'bg-blue-50 text-blue-700';
-      default:
-        return 'bg-gray-50 text-gray-700';
-    }
   };
 
   return (
@@ -112,10 +76,10 @@ const SettingsPage: React.FC = () => {
                 <h3 className='font-semibold text-gray-800'>{user?.name || '사용자'}</h3>
                 <div className='mt-1 flex gap-2'>
                   <span
-                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${getProviderColor(loginProvider || '')}`}
+                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${getProviderDetails(user?.provider).color}`}
                   >
-                    <i className={`${getProviderIcon(loginProvider || '')} mr-1`}></i>
-                    {getProviderDisplayName(loginProvider || '')} 로그인
+                    <i className={`${getProviderDetails(user?.provider).icon} mr-1`}></i>
+                    {getProviderDetails(user?.provider).displayName} 로그인
                   </span>
                   {spotifyConnection.isConnected && (
                     <span className='inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs text-green-700'>

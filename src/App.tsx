@@ -1,24 +1,22 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import Header from '@/components/layout/Header';
-
-import HomePage from '@/pages/HomePage';
-
-import ProfilePage from '@/pages/ProfilePage';
-import PlaylistResultPage from '@/pages/PlaylistResultPage';
 import BottomNav from '@/components/common/BottomNav';
+import AuthGuard from '@/components/AuthGuard';
+
+// Pages
+import HomePage from '@/pages/HomePage';
+import LoginPage from '@/pages/LoginPage';
+import AuthCallbackPage from '@/pages/AuthCallbackPage';
+import ProfilePage from '@/pages/ProfilePage';
 import ExplorePage from '@/pages/ExplorePage';
 import PostCreatePage from '@/pages/PostCreatePage';
 import SettingsPage from '@/pages/SettingsPage';
-import LoginPage from '@/pages/LoginPage';
-import AuthCallbackPage from '@/pages/AuthCallbackPage';
-import AuthGuard from '@/components/AuthGuard';
-import { useEffect } from 'react';
 import UserProfilePage from '@/pages/UserProfilePage';
-import { AuthProvider } from '@/contexts/AuthProvider.tsx';
-import { PostsProvider } from '@/contexts/PostsProvider.tsx';
-import { QueryProvider } from '@/contexts/QueryProvider';
-import { useAuthMonitor } from '@/hooks/useAuth';
+import PlaylistResultPage from '@/pages/PlaylistResultPage';
+// import SocialSignupPage from '@/pages/SocialSignupPage'; // TODO: 이 페이지를 생성해야 합니다.
 
+// 화면 높이를 CSS 변수로 설정하는 훅
 function useViewportHeightVar() {
   useEffect(() => {
     const setVh = () => {
@@ -37,11 +35,8 @@ function useViewportHeightVar() {
   }, []);
 }
 
-function AppContent() {
+function App() {
   useViewportHeightVar();
-
-  // 전역 인증 상태 모니터링 (10분마다)
-  useAuthMonitor(10 * 60 * 1000);
 
   return (
     <div
@@ -51,19 +46,11 @@ function AppContent() {
         color: 'var(--text-primary)',
       }}
     >
-      {/* 헤더 */}
       <Header />
-      {/* 메인 컨텐츠 */}
       <main className='w-full'>
         <div className='container mx-auto flex w-full flex-1 flex-col px-4 pt-4 md:px-6'>
           <Routes>
-            {/* 기본 라우트 */}
-            <Route path='/' element={<HomePage />} />
-            <Route path='/home' element={<HomePage />} />
-            <Route path='/explore' element={<ExplorePage />} />
-            <Route path='/feed' element={<ExplorePage />} />
-
-            {/* 인증 관련 라우트 */}
+            {/* 공개 경로 */}
             <Route
               path='/login'
               element={
@@ -72,12 +59,35 @@ function AppContent() {
                 </AuthGuard>
               }
             />
-            <Route path='/auth/callback' element={<AuthCallbackPage />} />
-            <Route path='/auth/signup' element={<AuthCallbackPage />} />
-            <Route path='/auth/integration' element={<AuthCallbackPage />} />
-            <Route path='/auth/error' element={<AuthCallbackPage />} />
+            <Route path='/oauth/callback' element={<AuthCallbackPage />} />
 
-            {/* 보호된 라우트 */}
+            {/* TODO: 신규 사용자 등록 페이지 생성 후 아래 라우트 활성화 */}
+            {/* <Route 
+              path="/social-signup" 
+              element={
+                <AuthGuard requireAuth={false}>
+                  <SocialSignupPage />
+                </AuthGuard>
+              } 
+            /> */}
+
+            {/* 보호된 경로 (인증 필수) */}
+            <Route
+              path='/'
+              element={
+                <AuthGuard>
+                  <HomePage />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path='/explore'
+              element={
+                <AuthGuard>
+                  <ExplorePage />
+                </AuthGuard>
+              }
+            />
             <Route
               path='/create'
               element={
@@ -111,14 +121,6 @@ function AppContent() {
               }
             />
             <Route
-              path='/setting'
-              element={
-                <AuthGuard>
-                  <SettingsPage />
-                </AuthGuard>
-              }
-            />
-            <Route
               path='/playlist-result'
               element={
                 <AuthGuard>
@@ -127,26 +129,13 @@ function AppContent() {
               }
             />
 
-            {/* 404 페이지 */}
-            <Route path='*' element={<HomePage />} />
+            {/* 404 페이지 대체 */}
+            <Route path='*' element={<Navigate to='/' replace />} />
           </Routes>
         </div>
       </main>
-      {/* 하단 네비게이션 */}
       <BottomNav />
     </div>
-  );
-}
-
-function App() {
-  return (
-    <QueryProvider>
-      <AuthProvider>
-        <PostsProvider>
-          <AppContent />
-        </PostsProvider>
-      </AuthProvider>
-    </QueryProvider>
   );
 }
 
