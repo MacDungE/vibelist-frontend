@@ -9,11 +9,16 @@ import type {
 
 // 소셜 로그인 콜백
 export const socialLoginCallback = (token: string) => {
-  return apiClient.get<SocialLoginCallbackResponse>(API_ENDPOINTS.AUTH.SOCIAL_CALLBACK, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiClient
+    .get<SocialLoginCallbackResponse>(API_ENDPOINTS.AUTH.SOCIAL_CALLBACK, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then(response => {
+      console.log('Social Login Callback Response:', response);
+      return response;
+    });
 };
 
 // 소셜 회원가입 완료
@@ -27,8 +32,7 @@ export const refreshToken = () => apiClient.post(API_ENDPOINTS.AUTH.REFRESH);
 export const logout = () => apiClient.post(API_ENDPOINTS.AUTH.LOGOUT);
 
 // 인증 상태 확인
-export const getAuthStatus = (): Promise<{ data: StatusResponse }> =>
-  apiClient.get(API_ENDPOINTS.AUTH.STATUS);
+export const getAuthStatus = () => apiClient.get<StatusResponse>(API_ENDPOINTS.AUTH.STATUS);
 
 // 소셜 로그인 URL 조회
 export const getSocialLoginUrls = (): Promise<{ data: Record<string, string> }> =>

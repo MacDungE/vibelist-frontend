@@ -8,7 +8,8 @@ export const useAuthStatus = () => {
   return useQuery({
     queryKey: queryKeys.auth.user(),
     queryFn: authApi.getAuthStatus,
-    staleTime: 30 * 1000, // 30초
+    select: response => response.data,
+    staleTime: 0, // 30초
     retry: false, // 인증 실패 시 재시도하지 않음
   });
 };
