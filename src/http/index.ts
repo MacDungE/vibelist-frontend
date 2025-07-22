@@ -28,6 +28,12 @@ export * from './systemApi';
 // Explore (검색, 트렌드, 피드)
 export * from './exploreApi';
 
+// 좋아요 관리
+export * from './likeApi';
+
+// 태그 관리
+export * from './tagApi';
+
 // 기존 API들 (API 문서에 없는 엔드포인트들)
 export * from './emotionApi';
 export * from './moodApi';

@@ -31,6 +31,8 @@ export const API_ENDPOINTS = {
   // 인증 관련
   AUTH: {
     BASE: '/v1/auth',
+    LOGIN: '/v1/auth/login',
+    OAUTH2_TOKEN: '/v1/auth/oauth2/token',
     SOCIAL_CALLBACK: '/v1/auth/social-login/callback',
     SOCIAL_COMPLETE_SIGNUP: '/v1/auth/social/complete-signup',
     REFRESH: '/v1/auth/refresh',
@@ -118,6 +120,26 @@ export const API_ENDPOINTS = {
   // 시스템 관련
   SYSTEM: {
     HEALTH: '/health',
+  },
+
+  // 좋아요 관련
+  LIKE: {
+    POST: (postId: number) => `/v1/post/${postId}/likes`,
+    POST_ME: (postId: number) => `/v1/post/${postId}/likes/me`,
+    POST_COUNT: (postId: number) => `/v1/post/${postId}/likes/count`,
+    COMMENT: (commentId: number) => `/v1/comment/${commentId}/likes`,
+    COMMENT_ME: (commentId: number) => `/v1/comment/${commentId}/likes/me`,
+    COMMENT_COUNT: (commentId: number) => `/v1/comment/${commentId}/likes/count`,
+  },
+
+  // 태그 관련
+  TAG: {
+    SUGGEST: '/v1/tag/suggest',
+  },
+
+  // ElasticSearch 관련
+  ELASTICSEARCH: {
+    INSERT: '/v1/elasticsearch/insert',
   },
 
   // 기존 API들 (API 문서에 없는 엔드포인트들)

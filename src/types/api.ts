@@ -32,12 +32,14 @@ export interface RecommendRqDto {
 export interface PostCreateRequest {
   tracks: TrackRsDto[];
   content: string;
+  tags?: string[];
   isPublic: boolean;
 }
 
 export interface PostUpdateRequest {
   id: number;
   content: string;
+  tags?: string[];
   isPublic: boolean;
 }
 
@@ -147,6 +149,11 @@ export interface UpdateUserProfileRequest {
 }
 
 // 인증 관련
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
 export interface SocialLoginCallbackResponse {
   accessToken: string;
 }
@@ -179,4 +186,43 @@ export type IntegrationProvider = 'spotify' | 'google';
 
 export interface IntegrationStatus {
   [key: string]: boolean;
+}
+
+// 좋아요 관련
+export interface LikeStatusRes {
+  liked: boolean;
+}
+
+export interface LikeCountRes {
+  likeCount: number;
+}
+
+// 태그 관련
+export interface TagSuggestResponse {
+  tags: string[];
+}
+
+// ElasticSearch 관련
+export interface TestEsDoc {
+  id: string;
+  title: string;
+  content: string;
+  username: string;
+}
+
+// 공통 응답 타입
+export interface RsDataObject<T = any> {
+  success: boolean;
+  code: string;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
+export interface RsDataLong {
+  success: boolean;
+  code: string;
+  message: string;
+  data: number;
+  timestamp: string;
 }

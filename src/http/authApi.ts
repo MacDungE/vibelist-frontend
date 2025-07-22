@@ -5,7 +5,16 @@ import type {
   SSOStatusResponse,
   CompleteSocialSignupRequest,
   SocialLoginCallbackResponse,
+  LoginRequest,
 } from '@/types/api';
+
+// 로그인 (username/password)
+export const login = (data: LoginRequest) =>
+  apiClient.post(API_ENDPOINTS.AUTH.LOGIN, data);
+
+// OAuth2 토큰 획득 (리프레시 토큰 사용)
+export const getOAuth2AccessToken = () =>
+  apiClient.post(API_ENDPOINTS.AUTH.OAUTH2_TOKEN);
 
 // 소셜 로그인 콜백
 export const socialLoginCallback = (token: string) => {
