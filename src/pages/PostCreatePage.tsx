@@ -93,7 +93,7 @@ const PostCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full pb-20 font-[Inter] flex flex-col items-center justify-center" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
+    <div className="min-h-screen w-full pb-20 flex flex-col items-center justify-center" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
       <form onSubmit={handleSubmit} className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-6 mt-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>포스트 작성</h1>
         {/* 플레이리스트 업로드/선택 */}

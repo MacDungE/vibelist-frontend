@@ -40,7 +40,7 @@ function App() {
 
   return (
     <div
-      className="grid min-h-dvh w-full grid-rows-[auto_minmax(min-content,1fr)] font-['Inter']"
+      className="grid min-h-dvh w-full grid-rows-[auto_minmax(min-content,1fr)]"
       style={{
         background: 'var(--bg)',
         color: 'var(--text-primary)',

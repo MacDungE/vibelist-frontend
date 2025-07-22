@@ -5,6 +5,7 @@
 // 환경별 API 기본 URL 설정
 const getApiBaseUrl = () => {
   // 환경변수에서 명시적으로 설정된 경우
+
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }

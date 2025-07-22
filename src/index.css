@@ -1,8 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./assets/pretendard-subset.css";
 
 
 @theme inline {
+  --font-sans: 'Pretendard', system-ui, Avenir, Helvetica, Arial, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -123,8 +125,8 @@ body[data-theme='light'] {
 
 /* 기존 불필요한 배경/텍스트색 제거 */
 
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
