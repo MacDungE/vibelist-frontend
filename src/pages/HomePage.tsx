@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import StepCard from '@/components/common/StepCard';
 import EmotionChart from '@/components/emotion/EmotionChart';
 import MoodChangeSelector from '@/components/mood/MoodChangeSelector';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStatus } from '@/hooks/useAuth';
 import LoginModal from '@/components/common/LoginModal';
 import { EMOTION_STATE } from '@/constants/emotion';
 
@@ -14,7 +14,7 @@ const initialPosition: EmotionPosition = { x: 50, y: 50 };
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isAuthenticated } = useAuthStatus();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Global state
@@ -244,7 +244,7 @@ const HomePage = () => {
     }
 
     // 로그인 체크
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
     }
