@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import LoginModal from './LoginModal';
 import SavePlaylistModal from './SavePlaylistModal';
+import SpotifyPlayerModal from './SpotifyPlayerModal';
 import {
   useComments,
   useCreateComment,
@@ -18,6 +19,21 @@ import {
   usePostLikeCount,
   useUpdatePost,
 } from '@/queries/usePostQueries';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/ko';
+dayjs.extend(relativeTime);
+dayjs.locale('ko');
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  Lock,
+  User,
+  ChevronDown,
+  ChevronUp,
+  Music,
+} from 'lucide-react';
 
 export type Track = {
   id: number;
@@ -39,11 +55,12 @@ export type Post = {
   duration?: string;
   spotifyUri?: string;
   playlist: Track[];
-  author?: string;
-  authorAvatar?: string;
-  emotion?: string;
-  mood?: string;
-  thumbnail?: string;
+  user: {
+    name: string; // 닉네임/이름
+    username: string; // 아이디
+    avatar?: string;
+    [key: string]: any;
+  };
   commentsPreview?: Array<{
     id: number;
     username?: string;
@@ -81,6 +98,8 @@ const PostCard: React.FC<PostCardProps> = ({
   const [loginModalMessage, setLoginModalMessage] = useState('');
   const [commentInput, setCommentInput] = useState('');
   const { isAuthenticated, user } = useAuth();
+  const [spotifyModalUri, setSpotifyModalUriLocal] = useState<string | null>(null);
+  const location = useLocation();
 
   // 댓글 쿼리
   const {
@@ -112,23 +131,23 @@ const PostCard: React.FC<PostCardProps> = ({
   });
 
   // 댓글 등록/대댓글
-  const handleAddComment = async (e: React.FormEvent, parentId?: number) => {
+  const handleAddComment = async (e: React.FormEvent, parentId?: number, inputValue?: string) => {
     e.preventDefault();
     if (!isAuthenticated) {
       setLoginModalMessage('댓글을 작성하려면 로그인이 필요합니다.');
       setShowLoginModal(true);
       return;
     }
-    if (!commentInput.trim() && !parentId) return;
-    if (parentId && !commentInput.trim()) return;
+    const value = inputValue !== undefined ? inputValue : commentInput;
+    if (!value.trim() && !parentId) return;
+    if (parentId && !value.trim()) return;
     await createCommentMutation.mutateAsync({
       postId: post.id,
-      content: parentId ? commentInput : commentInput,
+      content: value,
       parentId: parentId || undefined,
     });
     if (parentId) {
       setReplyTo(null);
-      setCommentInput('');
     } else {
       setCommentInput('');
     }
@@ -170,8 +189,12 @@ const PostCard: React.FC<PostCardProps> = ({
   const mood = post.mood || '반대 기분';
 
   const playlistLength = post.playlist?.length || 0;
+  // 대표 곡 이미지(첫 곡 cover) 우선 사용
   const playlistCover =
-    post.playlist?.[0]?.cover || 'https://i.scdn.co/image/ab67616d0000b27309a857d20020536deb494427';
+    post.playlist?.tracks?.[0]?.imageUrl ||
+    post.playlist?.tracks?.[0]?.albumCover ||
+    post.playlist?.tracks?.[0]?.cover ||
+    'https://i.scdn.co/image/ab67616d0000b27309a857d20020536deb494427';
   const playlistArtist = post.playlist?.[0]?.artist || '';
   const [dominantColor, setDominantColor] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -206,20 +229,30 @@ const PostCard: React.FC<PostCardProps> = ({
       }
     }
   }, [playlistCover]);
-  function getContrastTextColor(bg: string | null) {
-    if (!bg) return '#fff';
+  function getContrastTextColor(bg: string | null, opacity: number = 1) {
+    if (!bg) return `rgba(34,34,34,${opacity})`;
+    // 밝은 회색 계열이면 무조건 검정
+    if (
+      bg === '#f5f5f5' ||
+      bg === 'rgb(245,245,245)' ||
+      /^#f5f5f5$/i.test(bg) ||
+      /^rgb\(245,\s*245,\s*245\)$/i.test(bg)
+    ) {
+      return `rgba(34,34,34,${opacity})`;
+    }
     const match = bg.match(/rgb\((\d+),(\d+),(\d+)\)/);
-    if (!match) return '#fff';
+    if (!match) return `rgba(34,34,34,${opacity})`;
     const r = parseInt(match[1], 10);
     const g = parseInt(match[2], 10);
     const b = parseInt(match[3], 10);
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-    return yiq >= 180 ? '#222' : '#fff';
+    // 밝으면 어두운색, 어두우면 흰색
+    return yiq >= 180 ? `rgba(34,34,34,${opacity})` : `rgba(255,255,255,${opacity})`;
   }
   const handleAuthorClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (post.author && post.author !== '나') {
-      navigate(`/user/${post.author}`);
+    if (post.user && post.user.username && post.user.username !== '나') {
+      navigate(`/${post.user.username}`);
     }
   };
   const requireLogin = (message: string) => {
@@ -270,10 +303,11 @@ const PostCard: React.FC<PostCardProps> = ({
       commentLikeMutation.mutate();
       refetchCommentLikeCount();
     };
+    const [localInput, setLocalInput] = useState('');
     return (
       <div className={`mb-2 flex items-start gap-2 ${depth > 0 ? 'ml-8' : ''}`}>
         <div className='flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100'>
-          <i className='fas fa-user text-indigo-400'></i>
+          <User size={18} className='text-indigo-400' />
         </div>
         <div className='flex-1'>
           <div className='flex items-center gap-2'>
@@ -286,17 +320,16 @@ const PostCard: React.FC<PostCardProps> = ({
               onClick={handleCommentLike}
               aria-label='댓글 좋아요'
             >
-              <i
-                className='fas fa-heart'
-                style={{
-                  color: commentLiked ? 'var(--accent)' : 'var(--stroke)',
-                  filter: commentLiked ? 'drop-shadow(0 0 2px var(--accent))' : 'none',
-                }}
-              ></i>
+              <Heart
+                size={16}
+                fill={commentLiked ? '#ef4444' : 'none'}
+                color={commentLiked ? '#ef4444' : 'var(--stroke)'}
+                style={{ filter: commentLiked ? 'drop-shadow(0 0 2px #ef4444)' : 'none' }}
+              />
               <span>{commentLikeCount}</span>
             </button>
           </div>
-          <div className='mb-1 text-xs text-gray-400'>{comment.createdAt}</div>
+          <div className='mb-1 text-xs text-gray-400'>{dayjs(comment.createdAt).fromNow()}</div>
           {editId === comment.id ? (
             <form className='flex gap-2' onSubmit={e => handleEditComment(e, comment.id)}>
               <input
@@ -325,7 +358,7 @@ const PostCard: React.FC<PostCardProps> = ({
           )}
           <div className='mt-1 flex gap-2'>
             <button
-              className='text-xs text-blue-400 hover:underline'
+              className='text-xs text-gray-500 hover:text-blue-500 hover:underline'
               onClick={() => setReplyTo(comment.id)}
             >
               답글
@@ -333,7 +366,7 @@ const PostCard: React.FC<PostCardProps> = ({
             {user && user.username === comment.username && (
               <>
                 <button
-                  className='text-xs text-green-400 hover:underline'
+                  className='text-xs text-gray-500 hover:text-green-500 hover:underline'
                   onClick={() => {
                     setEditId(comment.id);
                     setCommentInput(comment.content);
@@ -342,7 +375,7 @@ const PostCard: React.FC<PostCardProps> = ({
                   수정
                 </button>
                 <button
-                  className='text-xs text-red-400 hover:underline'
+                  className='text-xs text-gray-500 hover:text-red-500 hover:underline'
                   onClick={() => handleDeleteComment(comment.id)}
                 >
                   삭제
@@ -352,12 +385,20 @@ const PostCard: React.FC<PostCardProps> = ({
           </div>
           {/* 대댓글 입력창 */}
           {replyTo === comment.id && (
-            <form className='mt-2 flex gap-2' onSubmit={e => handleAddComment(e, comment.id)}>
+            <form
+              className='mt-2 flex gap-2'
+              onSubmit={e => {
+                e.preventDefault();
+                if (!localInput.trim()) return;
+                handleAddComment(e, comment.id, localInput);
+                setLocalInput('');
+              }}
+            >
               <input
                 className='flex-1 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-900 focus:outline-none'
                 placeholder={`@${comment.username || comment.userProfileName}에게 답글 달기`}
-                value={commentInput}
-                onChange={e => setCommentInput(e.target.value)}
+                value={localInput}
+                onChange={e => setLocalInput(e.target.value)}
                 maxLength={200}
                 required
               />
@@ -372,7 +413,7 @@ const PostCard: React.FC<PostCardProps> = ({
                 className='rounded-lg px-3 py-1 text-xs font-semibold text-gray-500'
                 onClick={() => {
                   setReplyTo(null);
-                  setCommentInput('');
+                  setLocalInput('');
                 }}
               >
                 취소
@@ -423,8 +464,16 @@ const PostCard: React.FC<PostCardProps> = ({
     refetchLikeCount();
   };
 
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/post/${post.id}`, {
+      state: { from: location.pathname, scrollY: window.scrollY },
+    });
+  };
+
   // 포스트 수정/삭제 권한: user.username === post.userName
-  const canEditPost = user && post && user.username && post.author && user.username === post.author;
+  const canEditPost =
+    user && post && user.username && post.user && user.username === post.user.username;
 
   // 포스트 수정/삭제 상태 (중복 선언 제거)
   const [showEditModal, setShowEditModal] = useState(false);
@@ -451,6 +500,42 @@ const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  // 재생시간 포맷 함수
+  function formatDuration(sec: number) {
+    const hours = Math.floor(sec / 3600);
+    const minutes = Math.floor((sec % 3600) / 60);
+    const seconds = sec % 60;
+    if (hours > 0) {
+      return `총 ${hours}시간 ${minutes}분 ${seconds}초`;
+    } else if (minutes > 0) {
+      return `총 ${minutes}분 ${seconds}초`;
+    } else {
+      return `총 ${seconds}초`;
+    }
+  }
+
+  // dominantColor가 너무 어두우면 밝은 색으로 fallback
+  function getPlaylistBgColor() {
+    if (!dominantColor) return '#f5f5f5';
+    // rgb(19,21,20) 등 너무 어두우면 밝은 회색으로
+    const match = dominantColor.match(/rgb\((\d+),(\d+),(\d+)\)/);
+    if (!match) return dominantColor;
+    const r = parseInt(match[1], 10);
+    const g = parseInt(match[2], 10);
+    const b = parseInt(match[3], 10);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness < 60 ? '#f5f5f5' : dominantColor;
+  }
+
+  // 모든 댓글(부모+대댓글) 카운트 함수
+  function getTotalCommentCount(comments: any[]): number {
+    if (!Array.isArray(comments)) return 0;
+    return comments.reduce(
+      (acc, c) => acc + 1 + (c.children ? getTotalCommentCount(c.children) : 0),
+      0
+    );
+  }
+
   return (
     <div
       className='mb-4 rounded-[16px] p-5 font-sans'
@@ -466,7 +551,7 @@ const PostCard: React.FC<PostCardProps> = ({
           >
             <img
               src={
-                post.authorAvatar ||
+                post.user?.avatar ||
                 'https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=32&height=32&seq=avatar1&orientation=squarish'
               }
               alt=''
@@ -474,11 +559,16 @@ const PostCard: React.FC<PostCardProps> = ({
             />
           </div>
           <div className='cursor-pointer' onClick={handleAuthorClick}>
-            <p className='text-[15px] font-bold' style={{ color: 'var(--text-primary)' }}>
-              {showAuthor ? post.author || '@musiclover2024' : '@musiclover2024'}
-            </p>
+            <div className='flex items-center gap-2'>
+              <span className='text-[15px] font-bold' style={{ color: 'var(--text-primary)' }}>
+                {post.user?.name || '이름없음'}
+              </span>
+              {post.user?.username && (
+                <span className='text-xs text-gray-400'>@{post.user.username}</span>
+              )}
+            </div>
             <p className='text-[13px]' style={{ color: 'var(--text-secondary)' }}>
-              {post.createdAt}
+              {dayjs(post.createdAt).fromNow()}
             </p>
           </div>
         </div>
@@ -487,17 +577,23 @@ const PostCard: React.FC<PostCardProps> = ({
             className='flex items-center gap-1 rounded-full px-2 py-1 text-[12px]'
             style={{ background: 'var(--surface-alt)', color: 'var(--text-secondary)' }}
           >
-            <i className='fas fa-lock text-xs'></i>
+            <Lock size={14} className='mr-1' />
             PRIVATE
           </div>
         )}
         {/* 포스트 수정/삭제 버튼 (본인만) */}
         {canEditPost && (
           <div className='ml-2 flex gap-2'>
-            <button className='text-xs text-green-500 hover:underline' onClick={handleEditPost}>
+            <button
+              className='text-xs text-gray-500 hover:text-green-500 hover:underline'
+              onClick={handleEditPost}
+            >
               수정
             </button>
-            <button className='text-xs text-red-500 hover:underline' onClick={handleDeletePost}>
+            <button
+              className='text-xs text-gray-500 hover:text-red-500 hover:underline'
+              onClick={handleDeletePost}
+            >
               삭제
             </button>
           </div>
@@ -508,8 +604,8 @@ const PostCard: React.FC<PostCardProps> = ({
         open={showEditModal}
         onClose={handleCloseEditModal}
         playlist={
-          Array.isArray(post.playlist) && post.playlist.length > 0
-            ? post.playlist.map((track, idx) => ({
+          Array.isArray(post.playlist?.tracks) && post.playlist.tracks.length > 0
+            ? post.playlist.tracks.map((track, idx) => ({
                 id: track.id ?? idx + 1,
                 title: track.title ?? '제목 없음',
                 artist: track.artist ?? '',
@@ -547,8 +643,8 @@ const PostCard: React.FC<PostCardProps> = ({
             tags: tags.map(t => t.name),
           })
         }
-        authorUsername={post.author}
-        authorAvatar={post.authorAvatar}
+        authorUsername={post.user?.username}
+        authorAvatar={post.user?.avatar}
         isEditMode={true}
       />
       {/* Description */}
@@ -558,7 +654,7 @@ const PostCard: React.FC<PostCardProps> = ({
       {/* Playlist Preview Section */}
       <div
         className='mb-4 flex flex-col gap-2 rounded-[12px] px-4 py-3'
-        style={{ background: dominantColor || 'transparent', border: '1px solid var(--stroke)' }}
+        style={{ background: getPlaylistBgColor(), border: '1px solid var(--stroke)' }}
       >
         <div className='flex w-full flex-row items-center gap-4'>
           {/* 앨범(대표 트랙) 이미지 */}
@@ -571,68 +667,54 @@ const PostCard: React.FC<PostCardProps> = ({
           />
           {/* 우측 정보 */}
           <div className='flex h-full min-w-0 flex-1 flex-col justify-between'>
-            {/* 윗줄: 타이틀 + 태그들 오른쪽 */}
+            {/* 윗줄: 대표 곡 타이틀 + 곡수 */}
             <div className='flex min-w-0 items-center justify-between'>
               <span
                 className='truncate text-[15px] font-semibold'
-                style={{ color: getContrastTextColor(dominantColor) }}
+                style={{ color: getContrastTextColor(getPlaylistBgColor()) }}
               >
-                {playlistArtist}
+                {post.playlist?.tracks?.[0]?.title || playlistArtist}
               </span>
-              <div className='flex gap-1'>
-                <span
-                  className='inline-flex items-center gap-1.5 rounded-full px-2.5 py-1'
-                  style={{
-                    background: 'var(--primary)',
-                    color: getContrastTextColor(dominantColor),
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  <i
-                    className='fas fa-smile text-xs'
-                    style={{ color: getContrastTextColor(dominantColor) }}
-                  ></i>
-                  <span className='text-[13px] font-semibold'>{emotion}</span>
-                </span>
-                <span
-                  className='inline-flex items-center gap-1.5 rounded-full px-2.5 py-1'
-                  style={{
-                    background: 'var(--primary)',
-                    color: getContrastTextColor(dominantColor),
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  <i
-                    className='fas fa-arrow-up text-xs'
-                    style={{ color: getContrastTextColor(dominantColor) }}
-                  ></i>
-                  <span className='text-[13px] font-semibold'>{mood}</span>
-                </span>
-              </div>
+              <span
+                className='ml-2 text-xs'
+                style={{ color: getContrastTextColor(getPlaylistBgColor(), 0.7) }}
+              >
+                {post.playlist?.totalTracks
+                  ? `외 ${post.playlist.totalTracks - 1}곡`
+                  : post.playlist?.tracks?.length > 1
+                    ? `외 ${post.playlist.tracks.length - 1}곡`
+                    : ''}
+              </span>
             </div>
-            {/* 아랫줄: 곡수 + 스포티파이 + 토글 오른쪽 */}
-            <div className='mt-2 flex items-center justify-between'>
-              <span className='text-[13px]' style={{ color: getContrastTextColor(dominantColor) }}>
-                외 {Math.max(0, playlistLength - 1)}곡
-              </span>
+            {/* 총 재생시간, 스포티파이 버튼, 펼치기 버튼 한 줄: 총 n분은 왼쪽, 버튼 2개는 오른쪽 정렬 */}
+            <div className='mt-2 flex items-center justify-between gap-2'>
+              {post.playlist?.totalLengthSec && (
+                <span
+                  className='text-xs font-semibold'
+                  style={{ color: getContrastTextColor(getPlaylistBgColor()) }}
+                >
+                  {formatDuration(post.playlist.totalLengthSec)}
+                </span>
+              )}
               <div className='flex items-center gap-2'>
                 <button
                   type='button'
-                  onClick={() =>
-                    post.spotifyUri && setSpotifyModalUri && setSpotifyModalUri(post.spotifyUri)
-                  }
+                  onClick={() => {
+                    const playlistId = post.playlist?.spotifyUrl;
+                    if (playlistId) {
+                      const embedUrl = `https://open.spotify.com/embed/playlist/${playlistId}`;
+                      setSpotifyModalUriLocal(embedUrl);
+                    }
+                  }}
                   className='inline-flex items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold'
                   style={{
                     background: 'var(--accent)',
-                    color: getContrastTextColor(dominantColor),
+                    color: '#fff',
                     height: '2rem',
                     minWidth: 0,
                   }}
                 >
-                  <i
-                    className='fab fa-spotify text-[15px]'
-                    style={{ color: getContrastTextColor(dominantColor) }}
-                  ></i>
+                  <Music size={16} style={{ color: '#fff' }} />
                   스포티파이로 듣기
                 </button>
                 <button
@@ -643,13 +725,17 @@ const PostCard: React.FC<PostCardProps> = ({
                   className='inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs'
                   style={{
                     background: 'var(--surface)',
-                    color: getContrastTextColor(dominantColor),
+                    color: getContrastTextColor(getPlaylistBgColor()),
                     height: '2rem',
                     minWidth: 0,
                   }}
                   aria-label={isPlaylistExpanded ? '플레이리스트 닫기' : '플레이리스트 열기'}
                 >
-                  <i className={`fas fa-chevron-${isPlaylistExpanded ? 'up' : 'down'}`}></i>
+                  {isPlaylistExpanded ? (
+                    <ChevronUp size={16} color='#000' />
+                  ) : (
+                    <ChevronDown size={16} color='#000' />
+                  )}
                 </button>
               </div>
             </div>
@@ -659,7 +745,7 @@ const PostCard: React.FC<PostCardProps> = ({
           <div
             className='mt-3 max-h-56 overflow-y-auto pt-3'
             style={{
-              background: dominantColor || 'transparent',
+              background: getPlaylistBgColor(),
               borderRadius: 12,
               borderTop: `1.5px solid ${getContrastTextColor(dominantColor) === '#fff' ? 'rgba(255,255,255,0.3)' : '#bbb'}`,
             }}
@@ -670,32 +756,38 @@ const PostCard: React.FC<PostCardProps> = ({
                 borderRadius: 12,
               }}
             >
-              {post.playlist && post.playlist.length > 0 ? (
-                post.playlist.map((track, idx) => (
+              {post.playlist?.tracks && post.playlist.tracks.length > 0 ? (
+                post.playlist.tracks.map((track, idx) => (
                   <li
-                    key={track.id}
+                    key={track.id || idx}
                     className='flex items-center gap-3 py-2'
                     style={{
                       borderBottom:
-                        idx !== post.playlist.length - 1
+                        idx !== post.playlist.tracks.length - 1
                           ? `1px solid ${getContrastTextColor(dominantColor) === '#fff' ? 'rgba(255,255,255,0.3)' : '#bbb'}`
                           : 'none',
                     }}
                   >
                     <img
-                      src={track.cover || playlistCover}
+                      src={track.imageUrl || track.albumCover || track.cover || playlistCover}
                       alt={track.artist}
                       className='h-10 w-10 shrink-0 rounded-[6px] border border-[#E5E5E5] object-cover'
                     />
                     <span
-                      className='flex-1 truncate text-[15px] font-medium'
-                      style={{ color: getContrastTextColor(dominantColor) }}
+                      className='flex-1 truncate text-left text-[15px] font-medium'
+                      style={{ color: getContrastTextColor(getPlaylistBgColor()) }}
+                    >
+                      {track.title}
+                    </span>
+                    <span
+                      className='w-32 truncate text-right text-[14px] font-normal'
+                      style={{ color: getContrastTextColor(getPlaylistBgColor()) }}
                     >
                       {track.artist}
                     </span>
                     <span
-                      className='ml-2 text-[13px]'
-                      style={{ color: getContrastTextColor(dominantColor) }}
+                      className='ml-2 text-right text-[13px]'
+                      style={{ color: getContrastTextColor(getPlaylistBgColor()) }}
                     >
                       {track.duration}
                     </span>
@@ -713,6 +805,23 @@ const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
       </div>
+      {/* 태그 뱃지 (플레이리스트 미리보기 아래로 이동) */}
+      {post.tags && post.tags.length > 0 && (
+        <div className='mb-2 flex flex-wrap gap-1'>
+          {post.tags.map(tag => (
+            <span
+              key={tag}
+              className='rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700'
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
+      {/* SpotifyPlayerModal (내부 상태 관리용) */}
+      {spotifyModalUri && !setSpotifyModalUri && (
+        <SpotifyPlayerModal uri={spotifyModalUri} onClose={() => setSpotifyModalUriLocal(null)} />
+      )}
       {/* Footer Actions */}
       <div className='mt-2 flex items-center justify-between'>
         <div className='flex items-center gap-4'>
@@ -722,25 +831,21 @@ const PostCard: React.FC<PostCardProps> = ({
             aria-label='좋아요'
             style={{ minWidth: 48 }}
           >
-            <i
-              className='fas fa-heart'
-              style={{
-                color: liked ? 'var(--accent)' : 'var(--stroke)',
-                filter: liked ? 'drop-shadow(0 0 2px var(--accent))' : 'none',
-              }}
-            ></i>
+            <Heart
+              size={18}
+              fill={liked ? '#ef4444' : 'none'}
+              color={liked ? '#ef4444' : 'var(--stroke)'}
+              style={{ filter: liked ? 'drop-shadow(0 0 2px #ef4444)' : 'none' }}
+            />
             <span>{likeCount}</span>
           </button>
           <button
             className='flex items-center gap-2 text-[15px] text-[#888]'
             aria-label='댓글'
-            onClick={() => setShowCommentsPreview(v => !v)}
+            onClick={handleCommentClick}
           >
-            <i className='fas fa-comment'></i>
-            <span>{post.commentsCount ?? post.comments ?? 0}</span>
-          </button>
-          <button className='flex items-center gap-2 text-[15px] text-[#888]'>
-            <i className='fas fa-share'></i>
+            <MessageCircle size={18} />
+            <span>{getTotalCommentCount(comments)}</span>
           </button>
         </div>
       </div>

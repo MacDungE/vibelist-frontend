@@ -81,27 +81,31 @@ const PostDetailPage: React.FC = () => {
   const cardData = {
     id: post.id,
     description: post.content,
-    author: post.userName || post.userProfileName,
-    emotion: 'N/A', // 필요시 content에서 추출
-    mood: 'N/A', // 필요시 content에서 추출
+    user: {
+      name: post.name || post.userProfileName || post.userName || '',
+      username: post.username || post.userName || '',
+      avatar: post.avatarUrl || post.userProfileImage || '',
+    },
     tags: post.tags,
-    createdAt: formatDate(post.createdAt),
+    createdAt: post.createdAt,
     likes: post.likeCnt,
     comments: comments.length,
     isPrivate: !post.isPublic,
-    playlist:
-      post.playlist?.tracks.map(track => ({
-        id: track.trackId,
-        artist: track.artist,
-        duration: `${Math.floor(track.durationMs / 60000)}:${String(Math.floor((track.durationMs % 60000) / 1000)).padStart(2, '0')}`,
-        cover: track.imageUrl,
-        title: track.title,
-        spotifyUrl: `https://open.spotify.com/track/${track.spotifyId}`,
-      })) || [],
-    authorAvatar: '', // 필요시 추가
-    moodIcon: '', // 필요시 추가
-    emotionIcon: '', // 필요시 추가
-    commentsPreview: comments.slice(0, 3), // 최신 3개 미리보기
+    playlist: {
+      tracks:
+        post.playlist?.tracks?.map(track => ({
+          id: track.trackId,
+          artist: track.artist,
+          duration: `${Math.floor(track.durationMs / 60000)}:${String(Math.floor((track.durationMs % 60000) / 1000)).padStart(2, '0')}`,
+          cover: track.imageUrl,
+          title: track.title,
+          spotifyUrl: `https://open.spotify.com/track/${track.spotifyId}`,
+        })) || [],
+      totalTracks: post.playlist?.totalTracks,
+      totalLengthSec: post.playlist?.totalLengthSec,
+      spotifyUrl: post.playlist?.spotifyUrl,
+    },
+    commentsPreview: comments.slice(0, 3),
     commentsCount: comments.length,
   };
 

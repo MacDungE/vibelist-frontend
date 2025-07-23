@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { X, Globe, Lock, Clock } from 'lucide-react';
 
 interface Track {
   id: number;
@@ -367,52 +368,10 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
             <span className='text-sm text-gray-500'>{description.length}/128</span>
           </div>
         </div>
-        {(fixedTag || selectedTags.length > 0) && (
+        {/* 태그 뱃지 표시 */}
+        {selectedTags.length > 0 && (
           <div className='mb-4'>
             <div className='flex flex-wrap gap-2'>
-              {/* 고정 태그(감정+기분) */}
-              {fixedTag && (
-                <div
-                  key={fixedTag.id}
-                  className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-indigo-400 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 shadow-sm select-none`}
-                  style={{
-                    background:
-                      fixedTag.emotion === '우울한 상태'
-                        ? '#FEE2E2'
-                        : fixedTag.emotion === '즐거운 상태'
-                          ? '#DBEAFE'
-                          : fixedTag.emotion === '활기찬 상태'
-                            ? '#DCFCE7'
-                            : '#F3F4F6',
-                    borderColor:
-                      fixedTag.mood === '기분 올리기'
-                        ? '#A5B4FC'
-                        : fixedTag.mood === '차분해지기'
-                          ? '#6EE7B7'
-                          : '#818CF8',
-                  }}
-                  onClick={() => onFixedTagClick && onFixedTagClick(fixedTag)}
-                  title='이 태그로 포스트 필터링'
-                >
-                  {/* 감정/기분 아이콘 */}
-                  <span className='mr-1'>
-                    {fixedTag.emotion === '우울한 상태' && (
-                      <i className='fas fa-cloud-rain text-blue-400'></i>
-                    )}
-                    {fixedTag.emotion === '즐거운 상태' && (
-                      <i className='fas fa-sun text-yellow-400'></i>
-                    )}
-                    {fixedTag.emotion === '활기찬 상태' && (
-                      <i className='fas fa-bolt text-green-400'></i>
-                    )}
-                  </span>
-                  <span>#{fixedTag.name}</span>
-                  <span className='ml-1 text-xs text-gray-400'>
-                    <i className='fas fa-lock'></i>
-                  </span>
-                </div>
-              )}
-              {/* 사용자 태그 */}
               {selectedTags.map(tag => (
                 <div
                   key={tag.id}
@@ -432,11 +391,20 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
                     className='ml-1 rounded-full p-1 text-indigo-500 transition-colors hover:bg-indigo-200 hover:text-indigo-700'
                     aria-label='태그 삭제'
                   >
-                    <i className='fas fa-times text-xs'></i>
+                    <X size={14} />
                   </button>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+        {/* 고정 태그 뱃지 표시 */}
+        {fixedTag && (
+          <div className='mb-2 flex items-center gap-2'>
+            <span className='inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1.5 text-sm font-semibold text-indigo-700'>
+              <i className='fas fa-tag text-[#4A6CF7]'></i>
+              {fixedTag.displayName || fixedTag.name}
+            </span>
           </div>
         )}
         <div className='mb-6 rounded-lg bg-gray-50 p-4'>
@@ -458,7 +426,7 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
           </div>
           <div className='border-t border-gray-200 pt-3'>
             <div className='flex items-center gap-2 text-xs text-gray-500'>
-              <i className='far fa-clock'></i>
+              <Clock size={14} />
               <span>생성일: 2025.01.08</span>
             </div>
           </div>
@@ -471,13 +439,15 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
                 className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${isPublic ? 'bg-[#4A6CF7] text-white' : 'bg-gray-100 text-gray-600'}`}
                 onClick={() => setIsPublic(true)}
               >
-                <i className='fas fa-globe-asia mr-2'></i>공개
+                <Globe size={16} className='mr-2 inline-block' />
+                공개
               </button>
               <button
                 className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${!isPublic ? 'bg-[#4A6CF7] text-white' : 'bg-gray-100 text-gray-600'}`}
                 onClick={() => setIsPublic(false)}
               >
-                <i className='fas fa-lock mr-2'></i>비공개
+                <Lock size={16} className='mr-2 inline-block' />
+                비공개
               </button>
             </div>
           </div>
@@ -492,7 +462,13 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
           </button>
           <button
             className='flex-1 rounded-lg bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] py-3 font-medium text-white transition-all hover:from-[#3955CC] hover:to-[#8470FF]'
-            onClick={() => onSave({ description, tags: selectedTags, isPublic })}
+            onClick={() => {
+              if (!description.trim()) {
+                alert('설명을 입력해주세요!');
+                return;
+              }
+              onSave({ description, tags: selectedTags, isPublic });
+            }}
             disabled={loading}
           >
             {loading ? (

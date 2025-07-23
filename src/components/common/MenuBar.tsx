@@ -1,20 +1,21 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Users, House, User } from 'lucide-react';
 
 const NAV_ITEMS = [
   {
     to: '/community',
-    icon: 'fas fa-users',
+    icon: <Users className='mb-1 text-2xl sm:text-xl' />,
     label: '커뮤니티',
   },
   {
     to: '/',
-    icon: 'fas fa-home',
+    icon: <House className='mb-1 text-2xl sm:text-xl' />,
     label: '홈',
   },
   {
     to: '/profile',
-    icon: 'fas fa-user',
+    icon: <User className='mb-1 text-2xl sm:text-xl' />,
     label: '프로필',
   },
 ];
@@ -55,18 +56,7 @@ const MenuBar: React.FC<{ className?: string }> = ({ className = '' }) => {
                   color: location.pathname === item.to ? 'var(--primary)' : 'var(--text-secondary)',
                 }}
               >
-                <i
-                  className={`${item.icon} mb-1 text-2xl sm:text-xl`}
-                  style={
-                    location.pathname === item.to
-                      ? {
-                          background: 'linear-gradient(90deg, var(--primary), var(--primary-600))',
-                          WebkitBackgroundClip: 'text',
-                          color: 'transparent',
-                        }
-                      : {}
-                  }
-                ></i>
+                {item.icon}
                 <span
                   className={`hidden text-sm font-medium sm:block`}
                   style={

@@ -7,7 +7,7 @@ export const createUser = (data: CreateUserRequest) =>
   apiClient.post(API_ENDPOINTS.USER.BASE, data);
 
 // 현재 사용자 정보 조회
-export const getCurrentUserInfo = () => apiClient.get(API_ENDPOINTS.USER.ME);
+export const getCurrentUserInfo = () => apiClient.get('/v1/users/me');
 
 // 현재 사용자 삭제 (DELETE /v1/users/me)
 export const deleteMe = () => apiClient.delete('/v1/users/me');

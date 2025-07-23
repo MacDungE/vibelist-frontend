@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PostCard from '@/components/common/PostCard';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,7 +8,7 @@ import {
   getUserInfo,
   updateCurrentUserProfile,
 } from '@/http/userApi';
-import { getLikedPostsByUser } from '@/http/postApi';
+import { getUserPosts, getUserLikedPosts } from '@/http/postApi';
 
 const UserProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -29,6 +29,10 @@ const UserProfilePage: React.FC = () => {
   const [editAvatar, setEditAvatar] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [size] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!username) return;
@@ -99,35 +103,108 @@ const UserProfilePage: React.FC = () => {
     }
   };
 
-  // 내 포스트 목록 (TODO: API 연결 필요, 현재는 profile.posts로 가정)
+  // 무한스크롤 IntersectionObserver
   useEffect(() => {
-    if (!profile) return;
-    setPostsLoading(true);
-    // 예시: profile.posts가 있다면 사용, 실제로는 별도 API 필요
-    if (profile.posts) {
-      setPosts(profile.posts);
-      setPostsLoading(false);
-    } else {
-      // TODO: posts API 연결 필요
-      setPosts([]);
-      setPostsLoading(false);
-    }
-  }, [profile]);
+    if (!loaderRef.current) return;
+    const observer = new window.IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          if (tab === 'posts' && !postsLoading && page < totalPages - 1) {
+            setPage(p => p + 1);
+          } else if (tab === 'likes' && !likesLoading && page < totalPages - 1) {
+            setPage(p => p + 1);
+          }
+        }
+      },
+      { threshold: 1 }
+    );
+    observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [tab, postsLoading, likesLoading, page, totalPages]);
 
-  // 좋아요한 포스트 목록
+  // posts/likedPosts append 구조로 변경
   useEffect(() => {
-    if (!isMine || tab !== 'likes') return;
-    setLikesLoading(true);
-    getLikedPostsByUser()
+    if (!username) return;
+    setPostsLoading(true);
+    getUserPosts(username, page, size)
       .then(res => {
-        setLikedPosts(res.data.data || []);
+        const data = res.data.data;
+        setPosts(prev =>
+          page === 0
+            ? (data.content || []).map((post: any) => ({
+                ...post,
+                user: post.user || {
+                  name: post.userProfileName || post.userName || '',
+                  username: post.userName || '',
+                  avatar: profile?.avatarUrl || '',
+                },
+              }))
+            : [
+                ...prev,
+                ...(data.content || []).map((post: any) => ({
+                  ...post,
+                  user: post.user || {
+                    name: post.userProfileName || post.userName || '',
+                    username: post.userName || '',
+                    avatar: profile?.avatarUrl || '',
+                  },
+                })),
+              ]
+        );
+        setTotalPages(data.totalPages);
+        setPostsLoading(false);
+      })
+      .catch(() => {
+        setPosts([]);
+        setPostsLoading(false);
+      });
+    // eslint-disable-next-line
+  }, [username, page, size, tab]);
+
+  useEffect(() => {
+    if (!username || tab !== 'likes') return;
+    setLikesLoading(true);
+    getUserLikedPosts(username, page, size)
+      .then(res => {
+        const data = res.data.data;
+        setLikedPosts(prev =>
+          page === 0
+            ? (data.content || []).map((post: any) => ({
+                ...post,
+                user: post.user || {
+                  name: post.userProfileName || post.userName || '',
+                  username: post.userName || '',
+                  avatar: post.avatarUrl || '',
+                },
+              }))
+            : [
+                ...prev,
+                ...(data.content || []).map((post: any) => ({
+                  ...post,
+                  user: post.user || {
+                    name: post.userProfileName || post.userName || '',
+                    username: post.userName || '',
+                    avatar: post.avatarUrl || '',
+                  },
+                })),
+              ]
+        );
+        setTotalPages(data.totalPages);
         setLikesLoading(false);
       })
       .catch(() => {
         setLikedPosts([]);
         setLikesLoading(false);
       });
-  }, [isMine, tab]);
+    // eslint-disable-next-line
+  }, [username, tab, page, size]);
+
+  // 탭 변경 시 페이지/리스트 초기화
+  useEffect(() => {
+    setPage(0);
+    setPosts([]);
+    setLikedPosts([]);
+  }, [tab, username]);
 
   if (loading) {
     return (
@@ -201,23 +278,27 @@ const UserProfilePage: React.FC = () => {
         <div className='mb-4 flex gap-4 px-8'>
           <button
             className={`rounded-full px-3 py-1 text-sm font-semibold ${tab === 'posts' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-700'}`}
-            onClick={() => setTab('posts')}
+            onClick={() => {
+              setTab('posts');
+              setPage(0);
+            }}
           >
-            내 포스트
+            작성한 포스트
           </button>
-          {isMine && (
-            <button
-              className={`rounded-full px-3 py-1 text-sm font-semibold ${tab === 'likes' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}`}
-              onClick={() => setTab('likes')}
-            >
-              좋아요한 포스트
-            </button>
-          )}
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-semibold ${tab === 'likes' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+            onClick={() => {
+              setTab('likes');
+              setPage(0);
+            }}
+          >
+            좋아요한 포스트
+          </button>
         </div>
         {/* 포스트 목록 */}
         <section>
           {tab === 'posts' ? (
-            postsLoading ? (
+            postsLoading && posts.length === 0 ? (
               <div className='py-12 text-center text-gray-400'>포스트 불러오는 중...</div>
             ) : posts.length === 0 ? (
               <div className='py-12 text-center text-gray-400'>아직 포스트가 없습니다.</div>
@@ -226,9 +307,17 @@ const UserProfilePage: React.FC = () => {
                 {posts.map(post => (
                   <PostCard key={post.id} post={post} showAuthor={true} isDarkMode={false} />
                 ))}
+                {/* 무한스크롤 로더 */}
+                <div ref={loaderRef} style={{ height: 32 }} />
+                {postsLoading && (
+                  <div className='py-4 text-center text-gray-400'>불러오는 중...</div>
+                )}
+                {page >= totalPages - 1 && posts.length > 0 && (
+                  <div className='py-4 text-center text-gray-400'>마지막 페이지입니다.</div>
+                )}
               </div>
             )
-          ) : likesLoading ? (
+          ) : likesLoading && likedPosts.length === 0 ? (
             <div className='py-12 text-center text-gray-400'>좋아요한 포스트 불러오는 중...</div>
           ) : likedPosts.length === 0 ? (
             <div className='py-12 text-center text-gray-400'>좋아요한 포스트가 없습니다.</div>
@@ -237,9 +326,29 @@ const UserProfilePage: React.FC = () => {
               {likedPosts.map(post => (
                 <PostCard key={post.id} post={post} showAuthor={true} isDarkMode={false} />
               ))}
+              {/* 무한스크롤 로더 */}
+              <div ref={loaderRef} style={{ height: 32 }} />
+              {likesLoading && <div className='py-4 text-center text-gray-400'>불러오는 중...</div>}
+              {page >= totalPages - 1 && likedPosts.length > 0 && (
+                <div className='py-4 text-center text-gray-400'>마지막 페이지입니다.</div>
+              )}
             </div>
           )}
         </section>
+        {/* 페이지네이션 */}
+        {totalPages > 1 && (
+          <div className='my-6 flex justify-center gap-2'>
+            {Array.from({ length: totalPages }).map((_, idx) => (
+              <button
+                key={idx}
+                className={`rounded px-3 py-1 text-sm font-semibold ${page === idx ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => setPage(idx)}
+              >
+                {idx + 1}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {/* 프로필 편집 모달 */}
       {showEditModal && (

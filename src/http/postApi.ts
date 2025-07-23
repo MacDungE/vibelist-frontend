@@ -26,3 +26,11 @@ export const updatePost = (data: PostUpdateRequest): Promise<{ data: RsDataObjec
 // 사용자가 좋아요한 게시글 목록 조회
 export const getLikedPostsByUser = (): Promise<{ data: RsDataObject<PostDetailResponse[]> }> =>
   apiClient.get(API_ENDPOINTS.POST.LIKES);
+
+// 특정 사용자가 작성한 게시글 목록 조회
+export const getUserPosts = (username: string, page: number = 0, size: number = 10) =>
+  apiClient.get(API_ENDPOINTS.POST.USER_POSTS(username), { params: { page, size } });
+
+// 특정 사용자가 좋아요한 게시글 목록 조회
+export const getUserLikedPosts = (username: string, page: number = 0, size: number = 10) =>
+  apiClient.get(API_ENDPOINTS.POST.USER_LIKES(username), { params: { page, size } });

@@ -4,8 +4,10 @@
 
 // 환경별 API 기본 URL 설정
 const getApiBaseUrl = () => {
-  // 환경변수에서 명시적으로 설정된 경우
+  console.log('모든 환경변수:', import.meta.env);
+  console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
 
+  // 환경변수에서 명시적으로 설정된 경우
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
@@ -71,8 +73,10 @@ export const API_ENDPOINTS = {
   // 게시글 관련
   POST: {
     BASE: '/v1/post',
-    LIKES: '/v1/post/likes',
     DETAIL: (id: number) => `/v1/post/${id}`,
+    USER_POSTS: (username: string) => `/v1/post/${username}/posts`,
+    USER_LIKES: (username: string) => `/v1/post/${username}/likes`,
+    LIKES: '/v1/post/likes',
   },
 
   // 댓글 관련

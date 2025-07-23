@@ -49,9 +49,19 @@ const PlaylistResultPage: React.FC = () => {
   const selectedMoodChange = location.state?.selectedMoodChange || '기분 변화 정보 없음';
 
   // 고정 태그 생성
+  // 예시: '즐거운 상태에서 차분해지기', 실제 태그: '즐거운_상태에서_차분해지기'
+  function getFixedTagText(emotion: string, mood: string) {
+    // 자연스러운 문장형 변환
+    return `${emotion} 상태에서 ${mood}로 변화하기`;
+  }
+  function getFixedTagValue(emotion: string, mood: string) {
+    // 띄어쓰기 대신 언더스코어로 연결
+    return `${emotion}_상태에서_${mood}로_변화하기`;
+  }
   const fixedTag = {
     id: -1,
-    name: `${selectedEmotion}_${selectedMoodChange}`,
+    name: getFixedTagValue(selectedEmotion, selectedMoodChange),
+    displayName: getFixedTagText(selectedEmotion, selectedMoodChange),
     emotion: selectedEmotion,
     mood: selectedMoodChange,
     fixed: true,
