@@ -1,7 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStatus } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import LoginModal from './LoginModal';
+import SavePlaylistModal from './SavePlaylistModal';
+import {
+  useComments,
+  useCreateComment,
+  useDeleteComment,
+  useUpdateComment,
+  useCommentLike,
+  useCommentLikeStatus,
+  useCommentLikeCount,
+} from '@/queries/useCommentQueries';
+import {
+  usePostLike,
+  usePostLikeStatus,
+  usePostLikeCount,
+  useUpdatePost,
+} from '@/queries/usePostQueries';
 
 export type Track = {
   id: number;
@@ -19,36 +35,35 @@ export type Post = {
   isPrivate: boolean;
   createdAt: string;
   tags: string[];
-  trackCount: number;
-  duration: string;
-  spotifyUri: string;
+  trackCount?: number;
+  duration?: string;
+  spotifyUri?: string;
   playlist: Track[];
   author?: string;
   authorAvatar?: string;
   emotion?: string;
   mood?: string;
   thumbnail?: string;
+  commentsPreview?: Array<{
+    id: number;
+    username?: string;
+    userProfileName?: string;
+    content: string;
+    createdAt: string;
+  }>;
+  commentsCount?: number;
 };
 
 interface PostCardProps {
   post: Post;
   showAuthor?: boolean;
-  isDarkMode: boolean;
-  setSpotifyModalUri: (uri: string) => void;
+  isDarkMode?: boolean;
+  setSpotifyModalUri?: (uri: string) => void;
   onLike?: () => void;
   onComment?: () => void;
-}
-
-// 댓글 타입 정의
-interface CardComment {
-  id: number;
-  postId: number;
-  author: string;
-  authorUsername: string;
-  content: string;
-  createdAt: string;
-  parentId?: number;
-  replies?: CardComment[];
+  defaultPlaylistExpanded?: boolean;
+  defaultCommentsExpanded?: boolean;
+  onPostEdited?: () => void;
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -56,12 +71,101 @@ const PostCard: React.FC<PostCardProps> = ({
   showAuthor = false,
   setSpotifyModalUri,
   onLike,
+  defaultPlaylistExpanded = false,
+  defaultCommentsExpanded = false,
+  onPostEdited,
 }) => {
-  const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(false);
+  const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(defaultPlaylistExpanded);
+  const [showCommentsPreview, setShowCommentsPreview] = useState(defaultCommentsExpanded);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMessage, setLoginModalMessage] = useState('');
+  const [commentInput, setCommentInput] = useState('');
+  const { isAuthenticated, user } = useAuth();
+
+  // 댓글 쿼리
+  const {
+    data: comments = [],
+    refetch: refetchComments,
+    isLoading: isCommentsLoading,
+  } = useComments(post.id);
+  const createCommentMutation = useCreateComment();
+  const updateCommentMutation = useUpdateComment();
+  const deleteCommentMutation = useDeleteComment();
+
+  const postId = post.id;
+  const { data: likeStatusData } = usePostLikeStatus(postId);
+  const { data: likeCountData, refetch: refetchLikeCount } = usePostLikeCount(postId);
+  const postLikeMutation = usePostLike(postId);
+  const liked = likeStatusData?.data?.liked;
+  const likeCount = likeCountData?.data?.likeCount ?? post.likes;
+
+  // CustomUserDetails 생성 (임시: 권한 등은 하드코딩)
+  const getCustomUserDetails = () => ({
+    enabled: true,
+    id: user?.id ? Number(user.id) : 0,
+    password: '',
+    authorities: [{ authority: 'USER' }],
+    username: user?.name || user?.email || '',
+    accountNonExpired: true,
+    accountNonLocked: true,
+    credentialsNonExpired: true,
+  });
+
+  // 댓글 등록/대댓글
+  const handleAddComment = async (e: React.FormEvent, parentId?: number) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      setLoginModalMessage('댓글을 작성하려면 로그인이 필요합니다.');
+      setShowLoginModal(true);
+      return;
+    }
+    if (!commentInput.trim() && !parentId) return;
+    if (parentId && !commentInput.trim()) return;
+    await createCommentMutation.mutateAsync({
+      postId: post.id,
+      content: parentId ? commentInput : commentInput,
+      parentId: parentId || undefined,
+    });
+    if (parentId) {
+      setReplyTo(null);
+      setCommentInput('');
+    } else {
+      setCommentInput('');
+    }
+    refetchComments();
+  };
+
+  // 댓글 수정
+  const handleEditComment = async (e: React.FormEvent, commentId: number) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      setLoginModalMessage('댓글을 수정하려면 로그인이 필요합니다.');
+      setShowLoginModal(true);
+      return;
+    }
+    if (!commentInput.trim()) return;
+    await updateCommentMutation.mutateAsync({
+      id: commentId,
+      content: commentInput,
+      postId: post.id,
+    });
+    setEditId(null);
+    setCommentInput('');
+    refetchComments();
+  };
+
+  // 댓글 삭제
+  const handleDeleteComment = async (commentId: number) => {
+    if (!isAuthenticated) {
+      setLoginModalMessage('댓글을 삭제하려면 로그인이 필요합니다.');
+      setShowLoginModal(true);
+      return;
+    }
+    await deleteCommentMutation.mutateAsync({ id: commentId, postId: post.id });
+    refetchComments();
+  };
+
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStatus();
   const emotion = post.emotion || '무기력한 상태';
   const mood = post.mood || '반대 기분';
 
@@ -72,40 +176,7 @@ const PostCard: React.FC<PostCardProps> = ({
   const [dominantColor, setDominantColor] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // 댓글/대댓글 상태
-  const [showComments, setShowComments] = useState(false);
-  const [replyTo, setReplyTo] = useState<number | null>(null); // 대댓글 입력창 노출용
-  const [commentInput, setCommentInput] = useState('');
-  // mock 댓글 데이터 (실제는 props/context로 대체)
-  const [comments, setComments] = useState<CardComment[]>([
-    {
-      id: 1,
-      postId: post.id,
-      author: '재즈러버',
-      authorUsername: 'jazzlover',
-      content: '정말 감성적인 곡들이네요!',
-      createdAt: '1일 전',
-    },
-    {
-      id: 2,
-      postId: post.id,
-      author: '음악러버',
-      authorUsername: 'musiclover',
-      content: '감사합니다! 새벽에 듣기 좋아요.',
-      createdAt: '23시간 전',
-      parentId: 1,
-    },
-    {
-      id: 3,
-      postId: post.id,
-      author: '운동러버',
-      authorUsername: 'fituser',
-      content: '운동할 때 에너지 UP!',
-      createdAt: '2일 전',
-    },
-  ]);
-
-  // dominant color 추출 함수
+  // dominant color 추출 함수, getContrastTextColor 등은 그대로 유지
   function getDominantColor(img: HTMLImageElement): string | null {
     try {
       const canvas = document.createElement('canvas');
@@ -113,7 +184,6 @@ const PostCard: React.FC<PostCardProps> = ({
       canvas.height = 1;
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
-      // 중앙 1픽셀만 추출
       ctx.drawImage(img, img.naturalWidth / 2 - 0.5, img.naturalHeight / 2 - 0.5, 1, 1, 0, 0, 1, 1);
       const data = ctx.getImageData(0, 0, 1, 1).data;
       const r = data[0],
@@ -124,127 +194,168 @@ const PostCard: React.FC<PostCardProps> = ({
       return null;
     }
   }
-
   useEffect(() => {
     if (imgRef.current) {
       imgRef.current.onload = () => {
         const color = getDominantColor(imgRef.current!);
         setDominantColor(color);
       };
-      // 만약 이미 로드된 경우
       if (imgRef.current.complete) {
         const color = getDominantColor(imgRef.current);
         setDominantColor(color);
       }
     }
   }, [playlistCover]);
-
-  // 텍스트 색상: dominantColor의 명도에 따라 결정
   function getContrastTextColor(bg: string | null) {
     if (!bg) return '#fff';
-    // rgb(r,g,b)에서 r,g,b 추출
     const match = bg.match(/rgb\((\d+),(\d+),(\d+)\)/);
     if (!match) return '#fff';
     const r = parseInt(match[1], 10);
     const g = parseInt(match[2], 10);
     const b = parseInt(match[3], 10);
-    // YIQ 공식
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
     return yiq >= 180 ? '#222' : '#fff';
   }
-
-  // Author click handler
   const handleAuthorClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (post.author && post.author !== '나') {
       navigate(`/user/${post.author}`);
     }
   };
-
-  // 트리 구조 변환
-  function buildCommentTree(comments: CardComment[]) {
-    const map = new Map<number, CardComment & { replies: CardComment[] }>();
-    comments.forEach(c => map.set(c.id, { ...c, replies: [] }));
-    const roots: (CardComment & { replies: CardComment[] })[] = [];
-    map.forEach(c => {
-      if (c.parentId) {
-        map.get(c.parentId)?.replies.push(c);
-      } else {
-        roots.push(c);
-      }
-    });
-    return roots;
-  }
-  const commentTree = buildCommentTree(comments);
-  // 부모 username 찾기
-  const getParentUsername = (parentId?: number) => {
-    if (!parentId) return '';
-    const parent = comments.find(c => c.id === parentId);
-    return parent ? parent.authorUsername : '';
+  const requireLogin = (message: string) => {
+    if (!isAuthenticated) {
+      setLoginModalMessage(message);
+      setShowLoginModal(true);
+      return true;
+    }
+    return false;
   };
-  // 아바타 유틸(임시)
-  const getAvatar = (username: string) =>
-    `https://readdy.ai/api/search-image?query=avatar%20${username}&width=32&height=32&seq=avatar&orientation=squarish`;
 
-  // 댓글/대댓글 렌더 함수
-  const renderComments = (nodes: CardComment[], depth = 0) =>
-    nodes.map(c => (
-      <div
-        key={c.id}
-        className={`mb-3 flex gap-2 ${depth > 0 ? 'ml-8 border-l-2 border-[var(--stroke)] pl-4' : ''}`}
-      >
-        <img src={getAvatar(c.authorUsername)} className='h-8 w-8 rounded-full object-cover' />
+  const [replyTo, setReplyTo] = useState<number | null>(null); // 대댓글 입력창 노출용
+  const [editId, setEditId] = useState<number | null>(null); // 수정중인 댓글 id
+  const [editContent, setEditContent] = useState('');
+
+  // 대댓글 단일 항목 컴포넌트 (재귀)
+  const CommentItem = ({
+    comment,
+    user,
+    isAuthenticated,
+    setLoginModalMessage,
+    setShowLoginModal,
+    handleEditComment,
+    handleDeleteComment,
+    handleAddComment,
+    replyTo,
+    setReplyTo,
+    editId,
+    setEditId,
+    commentInput,
+    setCommentInput,
+    depth = 0,
+    renderComments,
+  }: any) => {
+    const { data: commentLikeStatusData } = useCommentLikeStatus(comment.id);
+    const { data: commentLikeCountData, refetch: refetchCommentLikeCount } = useCommentLikeCount(
+      comment.id
+    );
+    const commentLikeMutation = useCommentLike(comment.id);
+    const commentLiked = commentLikeStatusData?.data?.liked;
+    const commentLikeCount = commentLikeCountData?.data?.likeCount ?? comment.likeCount;
+    const handleCommentLike = () => {
+      if (!isAuthenticated) {
+        setLoginModalMessage('댓글 좋아요를 누르려면 로그인이 필요합니다.');
+        setShowLoginModal(true);
+        return;
+      }
+      commentLikeMutation.mutate();
+      refetchCommentLikeCount();
+    };
+    return (
+      <div className={`mb-2 flex items-start gap-2 ${depth > 0 ? 'ml-8' : ''}`}>
+        <div className='flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100'>
+          <i className='fas fa-user text-indigo-400'></i>
+        </div>
         <div className='flex-1'>
-          <div className='mb-0.5 flex items-center gap-2'>
-            <span className='text-sm font-bold text-[var(--text-primary)]'>{c.author}</span>
-            <span className='text-xs text-[var(--text-secondary)]'>@{c.authorUsername}</span>
-            <span className='text-xs text-[var(--text-secondary)]'>{c.createdAt}</span>
-          </div>
-          <div className='text-[15px] whitespace-pre-line text-[var(--text-secondary)]'>
-            {c.parentId && (
-              <span className='mr-1 font-semibold text-[var(--primary)]'>
-                @{getParentUsername(c.parentId)}
-              </span>
-            )}
-            {c.content}
-          </div>
-          <button
-            className='mt-1 text-xs text-[var(--primary)]'
-            onClick={() => {
-              if (requireLogin('답글을 작성하려면 로그인이 필요합니다.')) return;
-              setReplyTo(c.id);
-            }}
-          >
-            답글
-          </button>
-          {/* 대댓글 입력창 */}
-          {replyTo === c.id && (
-            <form
-              className='mt-2 flex gap-2'
-              onSubmit={e => {
-                e.preventDefault();
-                if (requireLogin('답글을 작성하려면 로그인이 필요합니다.')) return;
-                if (commentInput.trim()) {
-                  setComments(prev => [
-                    ...prev,
-                    {
-                      id: Date.now(),
-                      postId: post.id,
-                      author: '나',
-                      authorUsername: 'me',
-                      content: commentInput,
-                      createdAt: '방금 전',
-                      parentId: c.id,
-                    },
-                  ]);
-                  setCommentInput('');
-                  setReplyTo(null);
-                }
-              }}
+          <div className='flex items-center gap-2'>
+            <div className='text-sm font-medium text-gray-800'>
+              {comment.username || comment.userProfileName}
+            </div>
+            {/* 댓글 좋아요 버튼 */}
+            <button
+              className='ml-2 flex items-center gap-1 text-[15px] text-[#888]'
+              onClick={handleCommentLike}
+              aria-label='댓글 좋아요'
             >
+              <i
+                className='fas fa-heart'
+                style={{
+                  color: commentLiked ? 'var(--accent)' : 'var(--stroke)',
+                  filter: commentLiked ? 'drop-shadow(0 0 2px var(--accent))' : 'none',
+                }}
+              ></i>
+              <span>{commentLikeCount}</span>
+            </button>
+          </div>
+          <div className='mb-1 text-xs text-gray-400'>{comment.createdAt}</div>
+          {editId === comment.id ? (
+            <form className='flex gap-2' onSubmit={e => handleEditComment(e, comment.id)}>
               <input
                 className='flex-1 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-900 focus:outline-none'
-                placeholder={`@${c.authorUsername}에게 답글 달기`}
+                value={commentInput}
+                onChange={e => setCommentInput(e.target.value)}
+                maxLength={200}
+                required
+              />
+              <button
+                type='submit'
+                className='rounded-lg bg-[var(--primary)] px-3 py-1 text-xs font-semibold text-white'
+              >
+                저장
+              </button>
+              <button
+                type='button'
+                className='rounded-lg px-3 py-1 text-xs font-semibold text-gray-500'
+                onClick={() => setEditId(null)}
+              >
+                취소
+              </button>
+            </form>
+          ) : (
+            <div className='text-sm whitespace-pre-line text-gray-700'>{comment.content}</div>
+          )}
+          <div className='mt-1 flex gap-2'>
+            <button
+              className='text-xs text-blue-400 hover:underline'
+              onClick={() => setReplyTo(comment.id)}
+            >
+              답글
+            </button>
+            {user && user.username === comment.username && (
+              <>
+                <button
+                  className='text-xs text-green-400 hover:underline'
+                  onClick={() => {
+                    setEditId(comment.id);
+                    setCommentInput(comment.content);
+                  }}
+                >
+                  수정
+                </button>
+                <button
+                  className='text-xs text-red-400 hover:underline'
+                  onClick={() => handleDeleteComment(comment.id)}
+                >
+                  삭제
+                </button>
+              </>
+            )}
+          </div>
+          {/* 대댓글 입력창 */}
+          {replyTo === comment.id && (
+            <form className='mt-2 flex gap-2' onSubmit={e => handleAddComment(e, comment.id)}>
+              <input
+                className='flex-1 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-900 focus:outline-none'
+                placeholder={`@${comment.username || comment.userProfileName}에게 답글 달기`}
                 value={commentInput}
                 onChange={e => setCommentInput(e.target.value)}
                 maxLength={200}
@@ -256,63 +367,89 @@ const PostCard: React.FC<PostCardProps> = ({
               >
                 등록
               </button>
+              <button
+                type='button'
+                className='rounded-lg px-3 py-1 text-xs font-semibold text-gray-500'
+                onClick={() => {
+                  setReplyTo(null);
+                  setCommentInput('');
+                }}
+              >
+                취소
+              </button>
             </form>
           )}
-          {/* 대댓글 재귀 */}
-          {c.replies && c.replies.length > 0 && renderComments(c.replies, depth + 1)}
+          {/* 대댓글 재귀 렌더 */}
+          {comment.children &&
+            comment.children.length > 0 &&
+            renderComments(comment.children, depth + 1)}
         </div>
       </div>
-    ));
-
-  // 로그인 필요 함수
-  const requireLogin = (message: string) => {
-    if (!isAuthenticated) {
-      setLoginModalMessage(message);
-      setShowLoginModal(true);
-      return true;
-    }
-    return false;
+    );
   };
 
-  // 최상위 댓글 입력창
-  const renderRootCommentInput = () => (
-    <form
-      className='mt-2 flex gap-2'
-      onSubmit={e => {
-        e.preventDefault();
-        if (requireLogin('댓글을 작성하려면 로그인이 필요합니다.')) return;
-        if (commentInput.trim()) {
-          setComments(prev => [
-            ...prev,
-            {
-              id: Date.now(),
-              postId: post.id,
-              author: '나',
-              authorUsername: 'me',
-              content: commentInput,
-              createdAt: '방금 전',
-            },
-          ]);
-          setCommentInput('');
-        }
-      }}
-    >
-      <input
-        className='flex-1 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-900 focus:outline-none'
-        placeholder='댓글을 입력하세요...'
-        value={commentInput}
-        onChange={e => setCommentInput(e.target.value)}
-        maxLength={200}
-        required
+  // 대댓글 재귀 렌더 함수
+  const renderComments = (comments: any[], depth = 0) =>
+    comments.map(c => (
+      <CommentItem
+        key={c.id}
+        comment={c}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        setLoginModalMessage={setLoginModalMessage}
+        setShowLoginModal={setShowLoginModal}
+        handleEditComment={handleEditComment}
+        handleDeleteComment={handleDeleteComment}
+        handleAddComment={handleAddComment}
+        replyTo={replyTo}
+        setReplyTo={setReplyTo}
+        editId={editId}
+        setEditId={setEditId}
+        commentInput={commentInput}
+        setCommentInput={setCommentInput}
+        depth={depth}
+        renderComments={renderComments}
       />
-      <button
-        type='submit'
-        className='rounded-lg bg-[var(--primary)] px-3 py-1 text-xs font-semibold text-white'
-      >
-        등록
-      </button>
-    </form>
-  );
+    ));
+
+  // 좋아요 버튼 클릭
+  const handleLike = () => {
+    if (!isAuthenticated) {
+      setLoginModalMessage('좋아요를 누르려면 로그인이 필요합니다.');
+      setShowLoginModal(true);
+      return;
+    }
+    postLikeMutation.mutate();
+    refetchLikeCount();
+  };
+
+  // 포스트 수정/삭제 권한: user.username === post.userName
+  const canEditPost = user && post && user.username && post.author && user.username === post.author;
+
+  // 포스트 수정/삭제 상태 (중복 선언 제거)
+  const [showEditModal, setShowEditModal] = useState(false);
+  const updatePostMutation = useUpdatePost();
+  const handleEditPost = () => setShowEditModal(true);
+  const handleCloseEditModal = () => setShowEditModal(false);
+  const handleSaveEditPost = (data: any) => {
+    updatePostMutation.mutate(data, {
+      onSuccess: () => {
+        setShowEditModal(false);
+        if (typeof onPostEdited === 'function') {
+          onPostEdited();
+        }
+      },
+      onError: () => {
+        alert('포스트 수정에 실패했습니다.');
+      },
+    });
+  };
+
+  const handleDeletePost = () => {
+    if (window.confirm('정말로 이 포스트를 삭제하시겠습니까?')) {
+      alert('포스트 삭제 기능은 추후 구현 예정입니다.');
+    }
+  };
 
   return (
     <div
@@ -354,7 +491,66 @@ const PostCard: React.FC<PostCardProps> = ({
             PRIVATE
           </div>
         )}
+        {/* 포스트 수정/삭제 버튼 (본인만) */}
+        {canEditPost && (
+          <div className='ml-2 flex gap-2'>
+            <button className='text-xs text-green-500 hover:underline' onClick={handleEditPost}>
+              수정
+            </button>
+            <button className='text-xs text-red-500 hover:underline' onClick={handleDeletePost}>
+              삭제
+            </button>
+          </div>
+        )}
       </div>
+      {/* 포스트 수정 폼 (인라인) */}
+      <SavePlaylistModal
+        open={showEditModal}
+        onClose={handleCloseEditModal}
+        playlist={
+          Array.isArray(post.playlist) && post.playlist.length > 0
+            ? post.playlist.map((track, idx) => ({
+                id: track.id ?? idx + 1,
+                title: track.title ?? '제목 없음',
+                artist: track.artist ?? '',
+                duration: track.duration ?? '',
+                albumCover:
+                  track.cover ??
+                  track.albumCover ??
+                  'https://via.placeholder.com/64x64?text=No+Track',
+                spotifyUrl: track.spotifyUrl ?? '',
+                order: idx + 1,
+                album: track.album,
+              }))
+            : [
+                {
+                  id: 0,
+                  title: '플레이리스트 없음',
+                  artist: '',
+                  duration: '',
+                  albumCover: 'https://via.placeholder.com/64x64?text=No+Track',
+                  spotifyUrl: '',
+                  order: 1,
+                },
+              ]
+        }
+        initialDescription={post.description}
+        initialTags={(post.tags || []).map((t, i) => ({ id: i + 1, name: t }))}
+        isPublic={!post.isPrivate}
+        loading={updatePostMutation.isLoading}
+        error={updatePostMutation.isError ? '포스트 수정에 실패했습니다.' : undefined}
+        onSave={({ description, tags, isPublic }) =>
+          handleSaveEditPost({
+            id: post.id,
+            content: description,
+            isPublic,
+            tags: tags.map(t => t.name),
+          })
+        }
+        authorUsername={post.author}
+        authorAvatar={post.authorAvatar}
+        isEditMode={true}
+      />
       {/* Description */}
       <p className='mb-3 line-clamp-2 text-[15px]' style={{ color: 'var(--text-secondary)' }}>
         {post.description}
@@ -422,7 +618,9 @@ const PostCard: React.FC<PostCardProps> = ({
               <div className='flex items-center gap-2'>
                 <button
                   type='button'
-                  onClick={() => post.spotifyUri && setSpotifyModalUri(post.spotifyUri)}
+                  onClick={() =>
+                    post.spotifyUri && setSpotifyModalUri && setSpotifyModalUri(post.spotifyUri)
+                  }
                   className='inline-flex items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold'
                   style={{
                     background: 'var(--accent)',
@@ -520,42 +718,60 @@ const PostCard: React.FC<PostCardProps> = ({
         <div className='flex items-center gap-4'>
           <button
             className='flex items-center gap-2 text-[17px] font-semibold text-[var(--primary)] transition-transform hover:scale-110'
-            onClick={() => {
-              if (requireLogin('좋아요를 누르려면 로그인이 필요합니다.')) return;
-              onLike?.();
-            }}
+            onClick={handleLike}
             aria-label='좋아요'
             style={{ minWidth: 48 }}
           >
             <i
               className='fas fa-heart'
               style={{
-                color: post.likes > 0 ? 'var(--accent)' : 'var(--stroke)',
-                filter: post.likes > 0 ? 'drop-shadow(0 0 2px var(--accent))' : 'none',
+                color: liked ? 'var(--accent)' : 'var(--stroke)',
+                filter: liked ? 'drop-shadow(0 0 2px var(--accent))' : 'none',
               }}
             ></i>
-            <span>{post.likes}</span>
+            <span>{likeCount}</span>
           </button>
           <button
             className='flex items-center gap-2 text-[15px] text-[#888]'
-            onClick={() => {
-              if (requireLogin('댓글을 보려면 로그인이 필요합니다.')) return;
-              setShowComments(v => !v);
-            }}
+            aria-label='댓글'
+            onClick={() => setShowCommentsPreview(v => !v)}
           >
             <i className='fas fa-comment'></i>
-            <span>{comments.length}</span>
+            <span>{post.commentsCount ?? post.comments ?? 0}</span>
           </button>
           <button className='flex items-center gap-2 text-[15px] text-[#888]'>
             <i className='fas fa-share'></i>
           </button>
         </div>
       </div>
-      {/* 댓글/대댓글 트리 */}
-      {showComments && (
+      {/* 댓글 미리보기 */}
+      {showCommentsPreview && (
         <div className='mt-4 border-t border-[var(--stroke)] pt-4'>
-          {renderComments(commentTree)}
-          {renderRootCommentInput()}
+          {isCommentsLoading ? (
+            <div className='text-center text-gray-400'>댓글 불러오는 중...</div>
+          ) : comments.length === 0 ? (
+            <div className='mb-2 text-sm text-gray-400'>아직 댓글이 없습니다.</div>
+          ) : (
+            renderComments(comments)
+          )}
+          {/* 최상위 댓글 입력창 */}
+          <form className='mt-2 flex gap-2' onSubmit={e => handleAddComment(e)}>
+            <input
+              className='flex-1 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-900 focus:outline-none'
+              placeholder='댓글을 입력하세요...'
+              value={commentInput}
+              onChange={e => setCommentInput(e.target.value)}
+              maxLength={200}
+              required
+            />
+            <button
+              type='submit'
+              className='rounded-lg bg-[var(--primary)] px-3 py-1 text-xs font-semibold text-white'
+              disabled={createCommentMutation.isLoading}
+            >
+              등록
+            </button>
+          </form>
         </div>
       )}
       {/* Login Modal */}

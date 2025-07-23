@@ -129,6 +129,7 @@ export interface CommentResponseDto {
   parentId?: number;
   createdAt: string;
   likeCount: number;
+  children?: CommentResponseDto[];
 }
 
 // 사용자 관련

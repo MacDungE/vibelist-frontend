@@ -4,9 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import StepCard from '@/components/common/StepCard';
 import EmotionChart from '@/components/emotion/EmotionChart';
 import MoodChangeSelector from '@/components/mood/MoodChangeSelector';
-import { useAuthStatus } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import LoginModal from '@/components/common/LoginModal';
 import { EMOTION_STATE } from '@/constants/emotion';
+
+// API imports
+import { getRecommendations } from '@/http/recommendApi';
 
 import type { EmotionPosition, MoodChangeOption } from '@/types/common.ts';
 
@@ -14,8 +17,9 @@ const initialPosition: EmotionPosition = { x: 50, y: 50 };
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStatus();
+  const { isAuthenticated } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Global state
   const [activeStep, setActiveStep] = useState(1);
@@ -221,25 +225,29 @@ const HomePage = () => {
     return moodChangeMap[selectedMoodChange] || '선택하지 않음';
   };
 
-  // Handle create playlist
-  const handleCreatePlaylist = () => {
-    if (!selectedMoodChange) {
-      const toast = document.createElement('div');
-      toast.id = 'mood-change-toast';
-      toast.className =
-        'fixed top-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-gray-800 px-6 py-3 rounded-full shadow-lg backdrop-blur-sm border border-red-200 z-50 flex items-center gap-2 transition-opacity duration-300';
-      toast.innerHTML =
-        '<i class="fas fa-exclamation-circle text-red-500"></i> 기분 변화 옵션을 먼저 선택해주세요';
+  // Show error toast
+  const showErrorToast = (message: string) => {
+    const toast = document.createElement('div');
+    toast.id = 'error-toast';
+    toast.className =
+      'fixed top-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-gray-800 px-6 py-3 rounded-full shadow-lg backdrop-blur-sm border border-red-200 z-50 flex items-center gap-2 transition-opacity duration-300';
+    toast.innerHTML = `<i class="fas fa-exclamation-circle text-red-500"></i> ${message}`;
 
-      const existingToast = document.getElementById('mood-change-toast');
-      if (existingToast) {
-        existingToast.remove();
-      }
-      document.body.appendChild(toast);
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
+    const existingToast = document.getElementById('error-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  };
+
+  // Handle create playlist with API calls
+  const handleCreatePlaylist = async () => {
+    if (!selectedMoodChange) {
+      showErrorToast('기분 변화 옵션을 먼저 선택해주세요');
       return;
     }
 
@@ -249,13 +257,43 @@ const HomePage = () => {
       return;
     }
 
-    // 플레이리스트 결과 페이지로 이동
-    navigate('/playlist-result', {
-      state: {
-        selectedEmotion: getEmotionState(position.x, position.y),
-        selectedMoodChange: getMoodChangeSummary(),
-      },
-    });
+    try {
+      // 로딩 상태 시작
+      setIsLoading(true);
+
+      // 1. 감정/기분 기록 API 호출 제거 (postEmotion, postMoodChange)
+      // await postEmotion({ x: position.x, y: position.y });
+      // await postMoodChange(selectedMoodChange);
+
+      // 2. 추천 받기
+      const moodModeMap: { [key: string]: 'MAINTAIN' | 'ELEVATE' | 'CALM_DOWN' | 'REVERSE' } = {
+        maintain: 'MAINTAIN',
+        improve: 'ELEVATE',
+        calm: 'CALM_DOWN',
+        opposite: 'REVERSE',
+      };
+
+      const response = await getRecommendations({
+        userValence: position.x / 100, // 0-1 범위로 정규화
+        userEnergy: position.y / 100, // 0-1 범위로 정규화
+        mode: moodModeMap[selectedMoodChange],
+      });
+
+      // 3. 결과 페이지로 이동
+      navigate('/playlist-result', {
+        state: {
+          selectedEmotion: getEmotionState(position.x, position.y),
+          selectedMoodChange: getMoodChangeSummary(),
+          recommendations: response.data.data, // 추천된 트랙 리스트
+        },
+      });
+    } catch (error) {
+      // 에러 처리
+      console.error('Failed to create playlist:', error);
+      showErrorToast('플레이리스트 생성에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -300,15 +338,7 @@ const HomePage = () => {
               <button
                 onClick={() => {
                   if (position.x === 50 && position.y === 50) {
-                    const warningDiv = document.createElement('div');
-                    warningDiv.className =
-                      'fixed top-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-gray-800 px-6 py-3 rounded-full shadow-lg backdrop-blur-sm border border-red-200 z-50 flex items-center gap-2';
-                    warningDiv.innerHTML =
-                      '<i class="fas fa-exclamation-circle text-red-500"></i> 감정을 선택해주세요';
-                    document.body.appendChild(warningDiv);
-                    setTimeout(() => {
-                      warningDiv.remove();
-                    }, 2000);
+                    showErrorToast('감정을 선택해주세요');
                     return;
                   }
                   goToStep(2);
@@ -353,6 +383,7 @@ const HomePage = () => {
                 <button
                   onClick={() => goToStep(1)}
                   className='!rounded-button flex cursor-pointer items-center gap-2 px-8 py-4 font-medium whitespace-nowrap text-gray-600 transition-all duration-300 hover:translate-y-[-3px] hover:text-indigo-600'
+                  disabled={isLoading}
                 >
                   <i className='fas fa-arrow-left'></i>
                   이전
@@ -360,32 +391,24 @@ const HomePage = () => {
                 <button
                   onClick={() => {
                     if (!selectedMoodChange) {
-                      const toast = document.createElement('div');
-                      toast.id = 'mood-change-toast';
-                      toast.className =
-                        'fixed top-4 left-1/2 transform -translate-x-1/2 bg-white/90 text-gray-800 px-6 py-3 rounded-full shadow-lg backdrop-blur-sm border border-red-200 z-50 flex items-center gap-2 transition-opacity duration-300';
-                      toast.innerHTML =
-                        '<i class="fas fa-exclamation-circle text-red-500"></i> 기분 변화 옵션을 먼저 선택해주세요';
-
-                      const existingToast = document.getElementById('mood-change-toast');
-                      if (existingToast) {
-                        existingToast.remove();
-                      }
-                      document.body.appendChild(toast);
-                      setTimeout(() => {
-                        toast.style.opacity = '0';
-                        setTimeout(() => toast.remove(), 300);
-                      }, 2000);
+                      showErrorToast('기분 변화 옵션을 먼저 선택해주세요');
                       return;
                     }
                     handleCreatePlaylist();
                   }}
-                  className={`!rounded-button group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] px-10 py-4 font-medium whitespace-nowrap text-[#F7F9FC] shadow-md transition-all duration-300 hover:translate-y-[-3px] hover:shadow-lg ${!selectedMoodChange ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:shadow-none' : ''}`}
+                  disabled={isLoading || !selectedMoodChange}
+                  className={`!rounded-button group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] px-10 py-4 font-medium whitespace-nowrap text-[#F7F9FC] shadow-md transition-all duration-300 hover:translate-y-[-3px] hover:shadow-lg ${!selectedMoodChange || isLoading ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:shadow-none' : ''}`}
                 >
-                  <span className='relative z-10'>플레이리스트 만들기</span>
-                  <i className='fas fa-music relative z-10 ml-1'></i>
+                  <span className='relative z-10'>
+                    {isLoading ? '플레이리스트 생성 중...' : '플레이리스트 만들기'}
+                  </span>
+                  {isLoading ? (
+                    <i className='fas fa-spinner fa-spin relative z-10 ml-1'></i>
+                  ) : (
+                    <i className='fas fa-music relative z-10 ml-1'></i>
+                  )}
                   <div
-                    className={`absolute inset-0 -translate-x-full skew-x-12 bg-white/10 ${selectedMoodChange ? 'group-hover:animate-shine' : ''}`}
+                    className={`absolute inset-0 -translate-x-full skew-x-12 bg-white/10 ${selectedMoodChange && !isLoading ? 'group-hover:animate-shine' : ''}`}
                   ></div>
                 </button>
               </div>

@@ -14,6 +14,8 @@ import PostCreatePage from '@/pages/PostCreatePage';
 import SettingsPage from '@/pages/SettingsPage';
 import UserProfilePage from '@/pages/UserProfilePage';
 import PlaylistResultPage from '@/pages/PlaylistResultPage';
+import PostDetailPage from '@/pages/PostDetailPage';
+import SocialSignupPage from '@/pages/SocialSignupPage';
 // import SocialSignupPage from '@/pages/SocialSignupPage'; // TODO: 이 페이지를 생성해야 합니다.
 
 // 화면 높이를 CSS 변수로 설정하는 훅
@@ -61,15 +63,15 @@ function App() {
             />
             <Route path='/oauth/callback' element={<AuthCallbackPage />} />
 
-            {/* TODO: 신규 사용자 등록 페이지 생성 후 아래 라우트 활성화 */}
-            {/* <Route 
-              path="/social-signup" 
+            {/* 소셜 회원가입(닉네임 설정) 경로 */}
+            <Route
+              path='/social-signup'
               element={
                 <AuthGuard requireAuth={false}>
                   <SocialSignupPage />
                 </AuthGuard>
-              } 
-            /> */}
+              }
+            />
 
             {/* 공개 경로 - 로그인 없이 접근 가능 */}
             <Route path='/' element={<HomePage />} />
@@ -91,7 +93,7 @@ function App() {
               }
             />
             <Route
-              path='/user/:username'
+              path='/:username'
               element={
                 <AuthGuard>
                   <UserProfilePage />
@@ -114,6 +116,7 @@ function App() {
                 </AuthGuard>
               }
             />
+            <Route path='/post/:postId' element={<PostDetailPage />} />
 
             {/* 404 페이지 대체 */}
             <Route path='*' element={<Navigate to='/' replace />} />

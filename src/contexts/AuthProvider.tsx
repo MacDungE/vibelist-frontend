@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { AuthContext, type AuthContextType, type User } from '@/contexts/AuthContext';
 import apiClient from '@/http/client';
 import { authStorageService } from '@/services/authStorageService';
+import { getCurrentUserInfo } from '@/http/userApi';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -14,8 +15,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(authStorageService.getUser());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // 앱 시작 시 현재 사용자 정보 조회
   useEffect(() => {
-    setIsLoading(false);
+    setIsLoading(true);
+    getCurrentUserInfo()
+      .then(res => {
+        const u = res.data;
+        const userObj: User = {
+          id: u.userId,
+          username: u.username,
+          name: u.name,
+          email: u.email,
+          avatar: u.avatarUrl,
+          provider: '',
+        };
+        setUser(userObj);
+        authStorageService.setUser(userObj);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setUser(null);
+        authStorageService.setUser(null as any);
+        setIsLoading(false);
+      });
   }, []);
 
   const login = (newAccessToken: string, newUser: User) => {
@@ -36,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const isAuthenticated = !!accessToken;
+  const isAuthenticated = !!accessToken && !!user && !!user.username;
 
   const value: AuthContextType = {
     isAuthenticated,

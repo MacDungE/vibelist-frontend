@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as postApi from '@/http/postApi';
+import * as likeApi from '@/http/likeApi';
 import { queryKeys } from './queryKeys';
 import type { PostCreateRequest, PostUpdateRequest } from '@/types/api';
 
@@ -66,5 +67,37 @@ export const useDeletePost = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.lists() });
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
     },
+  });
+};
+
+// 게시글 좋아요 토글
+export const usePostLike = (postId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => likeApi.togglePostLike(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts.likeStatus(postId.toString()) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts.likeCount(postId.toString()) });
+    },
+  });
+};
+
+// 게시글 좋아요 상태(내가 눌렀는지)
+export const usePostLikeStatus = (postId: number) => {
+  return useQuery({
+    queryKey: queryKeys.posts.likeStatus(postId.toString()),
+    queryFn: () => likeApi.checkPostLiked(postId),
+    enabled: !!postId,
+    staleTime: 10 * 1000,
+  });
+};
+
+// 게시글 좋아요 개수
+export const usePostLikeCount = (postId: number) => {
+  return useQuery({
+    queryKey: queryKeys.posts.likeCount(postId.toString()),
+    queryFn: () => likeApi.getPostLikeCount(postId),
+    enabled: !!postId,
+    staleTime: 10 * 1000,
   });
 };

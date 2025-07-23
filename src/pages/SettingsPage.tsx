@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext'; // 경로 수정
+import { useAuth } from '@/contexts/AuthContext';
+import { deleteMe } from '@/http/userApi';
 import { getProviderDetails } from '@/constants/provider'; // 상수 임포트
 
 interface SpotifyConnection {
@@ -20,6 +21,8 @@ const SettingsPage: React.FC = () => {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showApiInfoModal, setShowApiInfoModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleSpotifyToggle = () => {
     if (spotifyConnection.isConnected) {
@@ -38,11 +41,19 @@ const SettingsPage: React.FC = () => {
     navigate('/login');
   };
 
-  const handleDeleteAccount = () => {
-    // Delete account logic
-    setShowDeleteModal(false);
-    logout();
-    navigate('/login');
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await deleteMe();
+      setShowDeleteModal(false);
+      logout();
+      navigate('/login');
+    } catch (e: any) {
+      setDeleteError('계정 삭제에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   return (
@@ -225,19 +236,22 @@ const SettingsPage: React.FC = () => {
                   모든 데이터가 영구적으로 삭제됩니다.
                   <br />이 작업은 되돌릴 수 없습니다.
                 </p>
+                {deleteError && <div className='mt-3 text-sm text-red-500'>{deleteError}</div>}
               </div>
               <div className='flex gap-3'>
                 <button
                   className='flex-1 rounded-lg bg-gray-100 py-3 font-medium text-gray-700 transition-all hover:bg-gray-200'
                   onClick={() => setShowDeleteModal(false)}
+                  disabled={deleteLoading}
                 >
                   취소
                 </button>
                 <button
-                  className='flex-1 rounded-lg bg-red-500 py-3 font-medium text-white transition-all hover:bg-red-600'
+                  className='flex-1 rounded-lg bg-red-500 py-3 font-medium text-white transition-all hover:bg-red-600 disabled:bg-red-300'
                   onClick={handleDeleteAccount}
+                  disabled={deleteLoading}
                 >
-                  삭제
+                  {deleteLoading ? '삭제중...' : '삭제'}
                 </button>
               </div>
             </div>

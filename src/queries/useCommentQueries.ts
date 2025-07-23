@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as commentApi from '@/http/commentApi';
+import * as likeApi from '@/http/likeApi';
 import { queryKeys } from './queryKeys';
 import { SORT_OPTIONS } from '@/constants/api';
 import type { CommentCreateDto, CommentUpdateDto } from '@/types/api';
@@ -20,21 +21,25 @@ interface CustomUserDetails {
 export const useComments = (postId: number, sort: string = SORT_OPTIONS.LATEST) => {
   return useQuery({
     queryKey: queryKeys.posts.comments(postId.toString()),
-    queryFn: () => commentApi.getComments(postId, sort),
+    queryFn: async () => {
+      const res = await commentApi.getComments(postId, sort);
+      return res.data.data || [];
+    },
     enabled: !!postId,
     staleTime: 1 * 60 * 1000, // 1분
   });
 };
 
-// 댓글 생성
+// 댓글 생성 (parentId 있으면 대댓글)
 export const useCreateComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ data, details }: { data: CommentCreateDto; details: CustomUserDetails }) =>
-      commentApi.createComment(data, details),
-    onSuccess: (_, { data }) => {
-      // 댓글 생성 후 해당 게시글의 댓글 목록 무효화
+    mutationFn: async (data: { postId: number; content: string; parentId?: number }) => {
+      const res = await commentApi.createComment(data);
+      return res.data.data;
+    },
+    onSuccess: (_, data) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.posts.comments(data.postId.toString()),
       });
@@ -47,18 +52,19 @@ export const useUpdateComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       id,
-      data,
-      details,
+      content,
+      postId,
     }: {
       id: number;
-      data: CommentUpdateDto;
-      details: CustomUserDetails;
+      content: string;
       postId: number;
-    }) => commentApi.updateComment(id, data, details),
+    }) => {
+      const res = await commentApi.updateComment(id, { content });
+      return res.data.data;
+    },
     onSuccess: (_, { postId }) => {
-      // 댓글 수정 후 해당 게시글의 댓글 목록 무효화
       queryClient.invalidateQueries({
         queryKey: queryKeys.posts.comments(postId.toString()),
       });
@@ -71,12 +77,50 @@ export const useDeleteComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, details }: { id: number; details: CustomUserDetails }) =>
-      commentApi.deleteComment(id, details),
-    onSuccess: () => {
-      // 댓글 삭제 후 모든 게시글의 댓글 목록 무효화
-      // (postId를 알 수 없으므로 모든 댓글 쿼리 무효화)
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
+    mutationFn: async ({ id, postId }: { id: number; postId: number }) => {
+      const res = await commentApi.deleteComment(id);
+      return res.data.data;
     },
+    onSuccess: (_, { postId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.posts.comments(postId.toString()),
+      });
+    },
+  });
+};
+
+// 댓글 좋아요 토글
+export const useCommentLike = (commentId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => likeApi.toggleCommentLike(commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.comments.likeStatus(commentId.toString()),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.comments.likeCount(commentId.toString()),
+      });
+    },
+  });
+};
+
+// 댓글 좋아요 상태(내가 눌렀는지)
+export const useCommentLikeStatus = (commentId: number) => {
+  return useQuery({
+    queryKey: queryKeys.comments.likeStatus(commentId.toString()),
+    queryFn: () => likeApi.checkCommentLiked(commentId),
+    enabled: !!commentId,
+    staleTime: 10 * 1000,
+  });
+};
+
+// 댓글 좋아요 개수
+export const useCommentLikeCount = (commentId: number) => {
+  return useQuery({
+    queryKey: queryKeys.comments.likeCount(commentId.toString()),
+    queryFn: () => likeApi.getCommentLikeCount(commentId),
+    enabled: !!commentId,
+    staleTime: 10 * 1000,
   });
 };

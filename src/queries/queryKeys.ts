@@ -23,6 +23,12 @@ export const queryKeys = {
     details: () => [...queryKeys.posts.all, 'detail'] as const,
     detail: (postId: string) => [...queryKeys.posts.details(), postId] as const,
     comments: (postId: string) => [...queryKeys.posts.all, 'comments', postId] as const,
+    likeStatus: (postId: string) => [...queryKeys.posts.detail(postId), 'likeStatus'] as const,
+    likeCount: (postId: string) => [...queryKeys.posts.detail(postId), 'likeCount'] as const,
+  },
+  comments: {
+    likeStatus: (commentId: string) => ['comment', commentId, 'likeStatus'] as const,
+    likeCount: (commentId: string) => ['comment', commentId, 'likeCount'] as const,
   },
 
   // 감정 관련
