@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/common/BottomNav';
@@ -15,7 +15,6 @@ import SettingsPage from '@/pages/SettingsPage';
 import UserProfilePage from '@/pages/UserProfilePage';
 import PlaylistResultPage from '@/pages/PlaylistResultPage';
 import PostDetailPage from '@/pages/PostDetailPage';
-import SocialSignupPage from '@/pages/SocialSignupPage';
 // import SocialSignupPage from '@/pages/SocialSignupPage'; // TODO: 이 페이지를 생성해야 합니다.
 
 // 화면 높이를 CSS 변수로 설정하는 훅
@@ -62,16 +61,6 @@ function App() {
               }
             />
             <Route path='/oauth/callback' element={<AuthCallbackPage />} />
-
-            {/* 소셜 회원가입(닉네임 설정) 경로 */}
-            <Route
-              path='/social-signup'
-              element={
-                <AuthGuard requireAuth={false}>
-                  <SocialSignupPage />
-                </AuthGuard>
-              }
-            />
 
             {/* 공개 경로 - 로그인 없이 접근 가능 */}
             <Route path='/' element={<HomePage />} />

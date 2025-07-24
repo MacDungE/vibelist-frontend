@@ -15,9 +15,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(authStorageService.getUser());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // 앱 시작 시 현재 사용자 정보 조회
+  // 앱 시작 시 현재 사용자 정보 조회 (access token이 있을 때만)
   useEffect(() => {
     setIsLoading(true);
+    
+    // 저장된 access token이 없으면 바로 로딩 종료
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     getCurrentUserInfo()
       .then(res => {
         const u = res.data;
@@ -27,7 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: u.name,
           email: u.email,
           avatar: u.avatarUrl,
-          provider: '',
+          provider: u.provider || '',
         };
         setUser(userObj);
         authStorageService.setUser(userObj);
@@ -35,10 +42,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       })
       .catch(() => {
         setUser(null);
-        authStorageService.setUser(null as any);
+        authStorageService.clear();
         setIsLoading(false);
       });
-  }, []);
+  }, [accessToken]);
 
   const login = (newAccessToken: string, newUser: User) => {
     authStorageService.setAccessToken(newAccessToken);

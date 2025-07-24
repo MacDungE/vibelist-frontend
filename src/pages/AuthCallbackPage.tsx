@@ -47,7 +47,7 @@ const AuthCallbackPage = () => {
         isProcessingRef.current = false;
       }
     },
-    [navigate, login]
+    [navigate, login, isMounted]
   );
 
   useEffect(() => {
@@ -61,23 +61,11 @@ const AuthCallbackPage = () => {
 
   useEffect(() => {
     const accessToken = searchParams.get('accessToken');
-    const isNewUser = searchParams.get('isNewUser') === 'true';
-    const provider = searchParams.get('provider');
-    const tempUserInfo = searchParams.get('tempUserInfo');
 
     if (accessToken && !isProcessingRef.current) {
       handleLogin(accessToken);
-    } else if (isNewUser) {
-      navigate(
-        `/social-signup?provider=${provider}&tempUserInfo=${encodeURIComponent(
-          tempUserInfo || ''
-        )}`,
-        {
-          replace: true,
-        }
-      );
-    } else if (!accessToken && !isNewUser) {
-      console.error('인증 콜백 오류: accessToken 또는 isNewUser 파라미터가 없습니다.');
+    } else if (!accessToken) {
+      console.error('인증 콜백 오류: accessToken 파라미터가 없습니다.');
       navigate('/login', { replace: true });
     }
   }, [searchParams, handleLogin, navigate]);
