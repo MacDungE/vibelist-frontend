@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { API_ENDPOINTS } from '@/constants/api';
 
 /**
  * 토큰 갱신 전용 매니저
@@ -15,4 +14,4 @@ const tokenClient = axios.create({
  * @returns Promise<{data: {accessToken: string}}>
  */
 export const refreshAccessToken = () =>
-  tokenClient.post(API_ENDPOINTS.AUTH.REFRESH);
+  tokenClient.post('/v1/auth/refresh');

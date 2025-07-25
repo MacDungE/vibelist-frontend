@@ -1,6 +1,10 @@
 import apiClient from './client';
-import { API_ENDPOINTS } from '@/constants/api';
+
+// API 엔드포인트
+const ENDPOINTS = {
+  HEALTH: '/health',
+};
 
 // 서버 상태 확인
 export const getHealthStatus = (): Promise<{ data: Record<string, any> }> =>
-  apiClient.get(API_ENDPOINTS.SYSTEM.HEALTH);
+  apiClient.get(ENDPOINTS.HEALTH);

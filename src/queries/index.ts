@@ -55,9 +55,6 @@ export {
 // 감정 관련 쿼리 훅들
 export { usePostEmotion } from './useEmotionQueries';
 
-// 무드 관련 쿼리 훅들
-export { usePostMoodChange } from './useMoodQueries';
-
 // 플레이리스트 관련 쿼리 훅들
 export {
   useAddPlaylistToSpotify,

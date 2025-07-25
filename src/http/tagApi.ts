@@ -1,6 +1,10 @@
-import { API_ENDPOINTS } from '@/constants/api';
 import type { RsDataObject } from '@/types/api';
 import apiClient from './client';
+
+// API 엔드포인트
+const ENDPOINTS = {
+  SUGGEST: '/v1/tag/suggest',
+};
 
 /**
  * 태그 자동완성
@@ -8,6 +12,6 @@ import apiClient from './client';
  * @param limit 반환 개수 (default = 10)
  */
 export const suggestTags = (q: string, limit: number = 10) =>
-  apiClient.get<RsDataObject<string[]>>(API_ENDPOINTS.TAG.SUGGEST, {
+  apiClient.get<RsDataObject<string[]>>(ENDPOINTS.SUGGEST, {
     params: { q, limit },
   });

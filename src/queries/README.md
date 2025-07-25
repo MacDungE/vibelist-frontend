@@ -13,7 +13,6 @@ src/queries/
 ├── useCommentQueries.ts       # 댓글 관련 쿼리
 ├── useUserQueries.ts          # 사용자 관련 쿼리
 ├── useEmotionQueries.ts       # 감정 관련 쿼리
-├── useMoodQueries.ts          # 무드 관련 쿼리
 ├── usePlaylistQueries.ts      # 플레이리스트 관련 쿼리
 ├── useRecommendQueries.ts     # 추천 관련 쿼리
 ├── useExploreQueries.ts       # 탐색 관련 쿼리

@@ -1,13 +1,20 @@
 import apiClient from './client';
-import { API_ENDPOINTS } from '@/constants/api';
 import type { PagePostDetailResponse, TrendResponse } from '@/types/api';
+
+// API 엔드포인트
+const ENDPOINTS = {
+  BASE: '/v1/explore',
+  TREND: '/v1/explore/trend',
+  SEARCH: '/v1/explore/search',
+  FEED: '/v1/explore/feed',
+};
 
 /**
  * 트렌드 조회
  * @param limit 최대 조회 개수 (기본값: 10)
  */
 export const getTrends = async (limit: number = 10): Promise<TrendResponse[]> => {
-  const response = await apiClient.get(API_ENDPOINTS.EXPLORE.TREND, {
+  const response = await apiClient.get(ENDPOINTS.TREND, {
     params: { limit },
   });
   return response.data;
@@ -24,7 +31,7 @@ export const searchPosts = async (
   page: number = 0,
   size: number = 10
 ): Promise<PagePostDetailResponse> => {
-  const response = await apiClient.get(API_ENDPOINTS.EXPLORE.SEARCH, {
+  const response = await apiClient.get(ENDPOINTS.SEARCH, {
     params: { q: query, page, size },
   });
   return response.data;
@@ -39,7 +46,7 @@ export const getFeed = async (
   page: number = 0,
   size: number = 10
 ): Promise<PagePostDetailResponse> => {
-  const response = await apiClient.get(API_ENDPOINTS.EXPLORE.FEED, {
+  const response = await apiClient.get(ENDPOINTS.FEED, {
     params: { page, size },
   });
   return response.data;
