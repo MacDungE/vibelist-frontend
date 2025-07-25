@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useDebounce } from 'react-use';
 import PostCard from '@/components/common/PostCard';
-import { getTrends, searchPosts, getFeed } from '@/http/exploreApi';
-import type { TrendResponse, PostDetailResponse } from '@/types/api';
+import { getTrends } from '@/http/exploreApi';
+import type { PostDetailResponse, TrendResponse } from '@/types/api';
 import { useFeed, useSearchPosts } from '@/queries/useExploreQueries';
 
 const PAGE_SIZE = 10;
@@ -21,7 +22,17 @@ const ExplorePage: React.FC = () => {
   const [trendError, setTrendError] = useState<string | null>(null);
 
   // 검색어
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // 검색어 디바운스 (500ms 지연)
+  useDebounce(
+    () => {
+      setDebouncedSearch(searchInput);
+    },
+    500,
+    [searchInput]
+  );
 
   // 무한스크롤 상태
   const [feedPage, setFeedPage] = useState(0);
@@ -45,7 +56,7 @@ const ExplorePage: React.FC = () => {
     isLoading: searchLoading,
     isError: searchError,
     isFetching: searchFetching,
-  } = useSearchPosts(search, searchPage, PAGE_SIZE);
+  } = useSearchPosts(debouncedSearch, searchPage, PAGE_SIZE);
 
   // 트렌드 기존대로
   useEffect(() => {
@@ -66,7 +77,6 @@ const ExplorePage: React.FC = () => {
 
   // feed 데이터 append (content가 배열일 때만)
   useEffect(() => {
-    console.log('feedData:', feedData);
     if (feedData && Array.isArray(feedData.data?.content)) {
       setFeedList(prev =>
         feedPage === 0 ? feedData.data.content : [...prev, ...feedData.data.content]
@@ -80,23 +90,23 @@ const ExplorePage: React.FC = () => {
 
   // search 데이터 append (content가 배열일 때만)
   useEffect(() => {
-    if (search && searchData && Array.isArray(searchData.content)) {
+    if (debouncedSearch && searchData && Array.isArray(searchData.content)) {
       setSearchList(prev =>
         searchPage === 0 ? searchData.content : [...prev, ...searchData.content]
       );
       setSearchLast(searchData.last);
-    } else if (search && searchData && searchPage === 0) {
+    } else if (debouncedSearch && searchData && searchPage === 0) {
       setSearchList([]);
       setSearchLast(true);
     }
-  }, [searchData, searchPage, search]);
+  }, [searchData, searchPage, debouncedSearch]);
 
   // 검색어 변경 시 검색 페이지/리스트 초기화
   useEffect(() => {
     setSearchPage(0);
     setSearchList([]);
     setSearchLast(false);
-  }, [search]);
+  }, [debouncedSearch]);
 
   // 무한스크롤 IntersectionObserver
   const loaderRef = React.useRef<HTMLDivElement | null>(null);
@@ -105,7 +115,7 @@ const ExplorePage: React.FC = () => {
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting) {
-          if (search) {
+          if (debouncedSearch) {
             if (
               !searchLast &&
               !searchFetching &&
@@ -129,7 +139,7 @@ const ExplorePage: React.FC = () => {
     observer.observe(loaderRef.current);
     return () => observer.disconnect();
   }, [
-    search,
+    debouncedSearch,
     searchLast,
     searchLoading,
     searchFetching,
@@ -196,9 +206,6 @@ const ExplorePage: React.FC = () => {
     },
   });
 
-  // 디버깅용 콘솔 출력
-  console.log('feedList:', feedList);
-  console.log('feedData.data.content:', feedData?.data?.content);
 
   return (
     <div
@@ -269,13 +276,13 @@ const ExplorePage: React.FC = () => {
               border: '1px solid var(--stroke)',
               color: 'var(--text-primary)',
             }}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
           />
         </div>
         {/* 피드/검색 결과 */}
         <div className='mb-10 grid grid-cols-1 gap-3'>
-          {search ? (
+          {debouncedSearch ? (
             searchList.length === 0 && searchLoading ? (
               <div className='py-12 text-center text-gray-400'>검색중...</div>
             ) : searchError ? (
@@ -307,11 +314,11 @@ const ExplorePage: React.FC = () => {
           )}
           {/* 무한스크롤 로더 */}
           <div ref={loaderRef} style={{ height: 32 }} />
-          {(search ? searchFetching : feedFetching) && (
+          {(debouncedSearch ? searchFetching : feedFetching) && (
             <div className='py-4 text-center text-gray-400'>불러오는 중...</div>
           )}
-          {(search ? searchLast : feedLast) &&
-            (search ? searchList.length > 0 : feedList.length > 0) && (
+          {(debouncedSearch ? searchLast : feedLast) &&
+            (debouncedSearch ? searchList.length > 0 : feedList.length > 0) && (
               <div className='py-4 text-center text-gray-400'>마지막 페이지입니다.</div>
             )}
         </div>

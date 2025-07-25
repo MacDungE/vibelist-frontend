@@ -4,9 +4,6 @@
 
 // 환경별 API 기본 URL 설정
 const getApiBaseUrl = () => {
-  console.log('모든 환경변수:', import.meta.env);
-  console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-
   // 환경변수에서 명시적으로 설정된 경우
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
@@ -35,8 +32,6 @@ export const API_ENDPOINTS = {
   AUTH: {
     BASE: '/v1/auth',
     LOGIN: '/v1/auth/login',
-    OAUTH2_TOKEN: '/v1/auth/oauth2/token',
-    SOCIAL_CALLBACK: '/v1/auth/social-login/callback',
     SOCIAL_COMPLETE_SIGNUP: '/v1/auth/social/complete-signup',
     REFRESH: '/v1/auth/refresh',
     LOGOUT: '/v1/auth/logout',
@@ -46,19 +41,6 @@ export const API_ENDPOINTS = {
     USER_SOCIAL: (userId: number) => `/v1/auth/${userId}/social`,
   },
 
-  // SSO 관련
-  SSO: {
-    BASE: '/v1/sso',
-    STATUS: '/v1/sso/status',
-    LOGIN_URLS: '/v1/sso/login-urls',
-    HEALTH: '/v1/sso/health',
-    REFRESH: '/v1/sso/refresh',
-    LOGOUT: '/v1/sso/logout',
-    CLAIM_TOKENS: '/v1/sso/claim-tokens',
-    CALLBACK: '/v1/sso/callback',
-    DEBUG_TOKENS: '/v1/sso/debug/tokens',
-    CLEANUP_TOKENS: '/v1/sso/admin/cleanup-tokens',
-  },
 
   // 사용자 관련
   USER: {

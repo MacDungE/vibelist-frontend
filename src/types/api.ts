@@ -155,9 +155,6 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface SocialLoginCallbackResponse {
-  accessToken: string;
-}
 
 export interface CompleteSocialSignupRequest {
   username: string;
@@ -172,15 +169,6 @@ export interface StatusResponse {
   name?: string;
 }
 
-export interface SSOStatusResponse {
-  authenticated: boolean;
-  userId: number;
-  username: string;
-  email: string;
-  name: string;
-  provider: string;
-  checkedAt: string;
-}
 
 // 외부 서비스 연동 관련
 export type IntegrationProvider = 'spotify' | 'google';

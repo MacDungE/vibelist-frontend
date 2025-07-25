@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import PostCard from '@/components/common/PostCard';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getCurrentUserInfo,
-  searchUsers,
   getUserInfo,
+  searchUsers,
   updateCurrentUserProfile,
 } from '@/http/userApi';
-import { getUserPosts, getUserLikedPosts } from '@/http/postApi';
+import { getUserLikedPosts, getUserPosts } from '@/http/postApi';
 
 const UserProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -158,7 +158,7 @@ const UserProfilePage: React.FC = () => {
         setPosts([]);
         setPostsLoading(false);
       });
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, page, size, tab]);
 
   useEffect(() => {
@@ -196,7 +196,6 @@ const UserProfilePage: React.FC = () => {
         setLikedPosts([]);
         setLikesLoading(false);
       });
-    // eslint-disable-next-line
   }, [username, tab, page, size]);
 
   // 탭 변경 시 페이지/리스트 초기화
@@ -251,10 +250,6 @@ const UserProfilePage: React.FC = () => {
               <div className='text-left text-xs whitespace-pre-line text-[var(--text-secondary)]'>
                 {profile.bio || ''}
               </div>
-              {/* 받은 좋아요(하트)만 표시 (TODO: API에서 제공 시 반영) */}
-              {/* <div className="text-xs text-[var(--text-secondary)] flex items-center gap-3">
-                <span><i className="fas fa-heart text-pink-400 mr-1"></i>받은 좋아요 <b>{userPosts.reduce((acc, p) => acc + (p.likes || 0), 0)}</b></span>
-              </div> */}
               {isMine && (
                 <div className='mt-2 flex gap-2'>
                   <button
