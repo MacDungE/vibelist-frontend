@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import PostCard from '@/components/common/PostCard';
 import type { Post } from '@/components/common/PostCard';
-import type { Comment } from '@/types';
+import { EMOTION_STATE } from '@/constants/emotion';
+
 
 // Mock public posts data
 const allPosts: Post[] = [
@@ -43,7 +44,7 @@ const allPosts: Post[] = [
     ],
     author: '운동러버',
     authorAvatar: '',
-    emotion: '활기찬 상태',
+    emotion: EMOTION_STATE.활기찬,
     mood: '기분 올리기',
   },
   {
@@ -73,9 +74,8 @@ const allPosts: Post[] = [
 const trendingPosts = allPosts.slice().sort((a, b) => b.likes - a.likes).slice(0, 2);
 
 const CommunityPage: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>(allPosts);
-  const [isDarkMode] = useState(false); // For demo, can be global state
-  const [spotifyModalUri, setSpotifyModalUri] = useState<string | null>(null);
+  const [posts] = useState<Post[]>(allPosts);
+  const [, setSpotifyModalUri] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen w-full bg-[#F9F9F9] font-sans">
@@ -89,7 +89,7 @@ const CommunityPage: React.FC = () => {
               <PostCard
                 key={post.id}
                 post={post}
-                isDarkMode={isDarkMode}
+                isDarkMode={false}
                 setSpotifyModalUri={setSpotifyModalUri}
                 showAuthor={true}
                 onLike={() => {}}
@@ -112,7 +112,7 @@ const CommunityPage: React.FC = () => {
               <div key={post.id} className="cursor-pointer">
                 <PostCard
                   post={post}
-                  isDarkMode={isDarkMode}
+                  isDarkMode={false}
                   setSpotifyModalUri={setSpotifyModalUri}
                   showAuthor={true}
                   onLike={() => {}}

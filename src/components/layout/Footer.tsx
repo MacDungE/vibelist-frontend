@@ -1,5 +1,4 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+
 import MenuBar from '../common/MenuBar';
 
 function Footer({ floating = false }: { floating?: boolean } = {}) {

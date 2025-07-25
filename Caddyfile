@@ -1,0 +1,7 @@
+{
+  local_certs
+}
+
+local.vibelist.com:443 {
+    reverse_proxy http://localhost:3000
+}

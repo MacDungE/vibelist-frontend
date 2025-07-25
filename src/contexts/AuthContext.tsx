@@ -1,22 +1,91 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import type { User } from '@/types/user';
+import { getCurrentUserInfo } from '@/http/userApi';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-}
-
-interface AuthContextType {
-  isLoggedIn: boolean;
+export interface AuthContextType {
+  isAuthenticated: boolean;
+  accessToken: string | null;
   user: User | null;
-  loginProvider: string | null;
-  login: (provider: string, userData: User) => void;
+  login: (accessToken: string, user: User) => void;
   logout: () => void;
-  loading: boolean;
+  isLoading: boolean;
+  refreshToken?: () => Promise<void>;
+  checkAuthStatus?: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export type { User };
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(() => {
+    // 앱 시작 시 localStorage에서 accessToken 불러오기
+    return localStorage.getItem('accessToken');
+  });
+
+  // 앱 시작 시 현재 사용자 정보 조회
+  useEffect(() => {
+    setIsLoading(true);
+    // accessToken이 있으면 인증 시도
+    if (accessToken) {
+      getCurrentUserInfo()
+        .then(res => {
+          const u = res.data;
+          setUser({
+            id: u.userId,
+            username: u.username,
+            name: u.name,
+            email: u.email,
+            avatar: u.avatarUrl,
+            provider: '',
+          });
+          setIsAuthenticated(true);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          setUser(null);
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          localStorage.removeItem('accessToken');
+        });
+    } else {
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsLoading(false);
+    }
+  }, [accessToken]);
+
+  const login = (token: string, user: User) => {
+    setAccessToken(token);
+    localStorage.setItem('accessToken', token);
+    setUser(user);
+    setIsAuthenticated(true);
+  };
+  const logout = () => {
+    setAccessToken(null);
+    localStorage.removeItem('accessToken');
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        accessToken,
+        user,
+        login,
+        logout,
+        isLoading,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -25,73 +94,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [loginProvider, setLoginProvider] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check for existing login state on app load
-    const checkAuthState = () => {
-      const storedLoginState = localStorage.getItem('isLoggedIn');
-      const storedUserData = localStorage.getItem('userData');
-      const storedProvider = localStorage.getItem('loginProvider');
-
-      if (storedLoginState === 'true' && storedUserData) {
-        try {
-          const userData = JSON.parse(storedUserData);
-          setIsLoggedIn(true);
-          setUser(userData);
-          setLoginProvider(storedProvider);
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-          logout();
-        }
-      }
-      setLoading(false);
-    };
-
-    checkAuthState();
-  }, []);
-
-  const login = (provider: string, userData: User) => {
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('loginProvider', provider);
-    localStorage.setItem('userData', JSON.stringify(userData));
-    
-    setIsLoggedIn(true);
-    setUser(userData);
-    setLoginProvider(provider);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('loginProvider');
-    localStorage.removeItem('userData');
-    
-    setIsLoggedIn(false);
-    setUser(null);
-    setLoginProvider(null);
-  };
-
-  const value: AuthContextType = {
-    isLoggedIn,
-    user,
-    loginProvider,
-    login,
-    logout,
-    loading
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}; 

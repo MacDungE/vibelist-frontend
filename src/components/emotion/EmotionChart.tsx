@@ -1,22 +1,22 @@
 import React from 'react';
-import { EmotionPosition } from '@/types';
+
+import type {EmotionPosition} from "@/types/common.ts";
 
 interface EmotionChartProps {
   position: EmotionPosition;
   setPosition: (pos: EmotionPosition) => void;
   isDragging: boolean;
   setIsDragging: (drag: boolean) => void;
-  chartRef: React.RefObject<HTMLDivElement>;
-  pointerRef: React.RefObject<HTMLDivElement>;
+  chartRef: React.RefObject<HTMLDivElement | null>;
+  pointerRef: React.RefObject<HTMLDivElement | null>;
   onPointerDown: (e: React.PointerEvent) => void;
   onPointerMove: (e: React.PointerEvent) => void;
 }
 
 const EmotionChart: React.FC<EmotionChartProps> = ({
   position,
-  setPosition,
+
   isDragging,
-  setIsDragging,
   chartRef,
   pointerRef,
   onPointerDown,
