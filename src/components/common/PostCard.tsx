@@ -1,39 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import LoginModal from './LoginModal';
 import SavePlaylistModal from './SavePlaylistModal';
 import SpotifyPlayerModal from './SpotifyPlayerModal';
 import {
+  useCommentLike,
+  useCommentLikeCount,
+  useCommentLikeStatus,
   useComments,
   useCreateComment,
   useDeleteComment,
   useUpdateComment,
-  useCommentLike,
-  useCommentLikeStatus,
-  useCommentLikeCount,
 } from '@/queries/useCommentQueries';
 import {
   usePostLike,
-  usePostLikeStatus,
   usePostLikeCount,
+  usePostLikeStatus,
   useUpdatePost,
 } from '@/queries/usePostQueries';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
+import { ChevronDown, ChevronUp, Heart, Lock, MessageCircle, Music, User } from 'lucide-react';
+
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
-import {
-  Heart,
-  MessageCircle,
-  Share2,
-  Lock,
-  User,
-  ChevronDown,
-  ChevronUp,
-  Music,
-} from 'lucide-react';
 
 export type Track = {
   id: number;

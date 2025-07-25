@@ -3,6 +3,7 @@ import * as postApi from '@/http/postApi';
 import * as likeApi from '@/http/likeApi';
 import { queryKeys } from './queryKeys';
 import type { PostCreateRequest, PostUpdateRequest } from '@/types/api';
+import { useAuth } from '@/hooks/useAuth';
 
 // 게시글 상세 조회
 export const usePostDetail = (postId: number) => {
@@ -84,10 +85,12 @@ export const usePostLike = (postId: number) => {
 
 // 게시글 좋아요 상태(내가 눌렀는지)
 export const usePostLikeStatus = (postId: number) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
   return useQuery({
     queryKey: queryKeys.posts.likeStatus(postId.toString()),
     queryFn: () => likeApi.checkPostLiked(postId),
-    enabled: !!postId,
+    enabled: !!postId && isAuthenticated && !isLoading, // 로그인된 상태에서만 API 호출
     staleTime: 10 * 1000,
   });
 };

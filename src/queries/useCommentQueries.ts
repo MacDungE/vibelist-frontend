@@ -1,11 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as commentApi from '@/http/commentApi';
 import * as likeApi from '@/http/likeApi';
 import { queryKeys } from './queryKeys';
 import { SORT_OPTIONS } from '@/constants/api';
-import type { CommentCreateDto, CommentUpdateDto } from '@/types/api';
+import { useAuth } from '@/hooks/useAuth';
 
-// CustomUserDetails 타입 정의
+/*// CustomUserDetails 타입 정의
 interface CustomUserDetails {
   enabled: boolean;
   id: number;
@@ -15,7 +15,7 @@ interface CustomUserDetails {
   accountNonExpired: boolean;
   accountNonLocked: boolean;
   credentialsNonExpired: boolean;
-}
+}*/
 
 // 댓글 조회
 export const useComments = (postId: number, sort: string = SORT_OPTIONS.LATEST) => {
@@ -52,15 +52,7 @@ export const useUpdateComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      content,
-      postId,
-    }: {
-      id: number;
-      content: string;
-      postId: number;
-    }) => {
+    mutationFn: async ({ id, content }: { id: number; content: string; postId: number }) => {
       const res = await commentApi.updateComment(id, { content });
       return res.data.data;
     },
@@ -77,7 +69,7 @@ export const useDeleteComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, postId }: { id: number; postId: number }) => {
+    mutationFn: async ({ id }: { id: number; postId: number }) => {
       const res = await commentApi.deleteComment(id);
       return res.data.data;
     },
@@ -107,10 +99,12 @@ export const useCommentLike = (commentId: number) => {
 
 // 댓글 좋아요 상태(내가 눌렀는지)
 export const useCommentLikeStatus = (commentId: number) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return useQuery({
     queryKey: queryKeys.comments.likeStatus(commentId.toString()),
     queryFn: () => likeApi.checkCommentLiked(commentId),
-    enabled: !!commentId,
+    enabled: !!commentId && isAuthenticated && !isLoading, // 로그인된 상태에서만 API 호출
     staleTime: 10 * 1000,
   });
 };
