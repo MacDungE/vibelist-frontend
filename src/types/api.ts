@@ -155,9 +155,6 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface SocialLoginCallbackResponse {
-  accessToken: string;
-}
 
 export interface CompleteSocialSignupRequest {
   username: string;

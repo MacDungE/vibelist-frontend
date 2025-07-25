@@ -4,7 +4,6 @@ import { API_ENDPOINTS } from '@/constants/api';
 import type {
   StatusResponse,
   CompleteSocialSignupRequest,
-  SocialLoginCallbackResponse,
   LoginRequest,
 } from '@/types/api';
 
@@ -12,23 +11,6 @@ import type {
 export const login = (data: LoginRequest) =>
   apiClient.post(API_ENDPOINTS.AUTH.LOGIN, data);
 
-// OAuth2 토큰 획득 (리프레시 토큰 사용)
-export const getOAuth2AccessToken = () =>
-  apiClient.post(API_ENDPOINTS.AUTH.OAUTH2_TOKEN);
-
-// 소셜 로그인 콜백
-export const socialLoginCallback = (token: string) => {
-  return apiClient
-    .get<SocialLoginCallbackResponse>(API_ENDPOINTS.AUTH.SOCIAL_CALLBACK, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    .then(response => {
-      console.log('Social Login Callback Response:', response);
-      return response;
-    });
-};
 
 // 소셜 회원가입 완료
 export const completeSocialSignup = (data: CompleteSocialSignupRequest) =>

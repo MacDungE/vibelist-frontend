@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { X, Globe, Lock, Clock } from 'lucide-react';
+import { Clock, Globe, Lock, X } from 'lucide-react';
+import { useDebounce } from 'react-use';
 
 interface Track {
   id: number;
@@ -21,12 +22,6 @@ interface Tag {
   fixed?: boolean;
 }
 
-interface FixedTag extends Tag {
-  emotion: string;
-  mood: string;
-  fixed: true;
-}
-
 interface SavePlaylistModalProps {
   open: boolean;
   onClose: () => void;
@@ -38,8 +33,15 @@ interface SavePlaylistModalProps {
   error?: string | null;
   onSave: (data: { description: string; tags: Tag[]; isPublic: boolean }) => void;
   onTagSearch?: (query: string) => Promise<Tag[]>;
-  fixedTag?: FixedTag;
-  onFixedTagClick?: (tag: FixedTag) => void;
+  fixedTag?: Tag & {
+    emotion: string;
+    mood: string;
+    fixed: true;
+    displayName?: string;
+  };
+  onFixedTagClick?: (
+    tag: Tag & { emotion: string; mood: string; fixed: true; displayName?: string }
+  ) => void;
   authorUsername?: string;
   authorAvatar?: string;
   isEditMode?: boolean;
@@ -57,7 +59,6 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
   onSave,
   onTagSearch,
   fixedTag,
-  onFixedTagClick,
   authorUsername,
   authorAvatar,
   isEditMode = false,
@@ -67,17 +68,43 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
   const [selectedTags, setSelectedTags] = useState<Tag[]>(initialTags);
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [tagSuggestions, setTagSuggestions] = useState<Tag[]>([]);
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const [currentTagQuery, setCurrentTagQuery] = useState('');
   const [removingTags, setRemovingTags] = useState<Set<number>>(new Set());
   const [showInlineTagInput, setShowInlineTagInput] = useState(false);
   const [inlineTagPosition, setInlineTagPosition] = useState({ top: 0, left: 0 });
   const [inlineTagValue, setInlineTagValue] = useState('');
   const [showInlineSuggestions, setShowInlineSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
-  const [tagError, setTagError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
+
+  // Debounced tag search states
+  const [debouncedInlineTagValue, setDebouncedInlineTagValue] = useState('');
+  const [debouncedDescriptionTagQuery, setDebouncedDescriptionTagQuery] = useState('');
+
+  // Debounce inline tag input (300ms delay)
+  useDebounce(
+    () => {
+      setDebouncedInlineTagValue(inlineTagValue);
+    },
+    300,
+    [inlineTagValue]
+  );
+
+  // Debounce description tag query (300ms delay)
+  useDebounce(
+    () => {
+      const beforeCursor = description.slice(0, cursorPosition);
+      const tagMatch = beforeCursor.match(/#[^\s]*$/);
+      if (tagMatch && tagMatch[0].length > 1) {
+        const query = tagMatch[0].slice(1);
+        setDebouncedDescriptionTagQuery(query);
+      } else {
+        setDebouncedDescriptionTagQuery('');
+      }
+    },
+    300,
+    [description, cursorPosition]
+  );
 
   useEffect(() => {
     if (open) {
@@ -85,17 +112,42 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
       setSelectedTags(initialTags);
       setIsPublic(initialIsPublic);
       setTagSuggestions([]);
-      setShowTagDropdown(false);
-      setCurrentTagQuery('');
       setRemovingTags(new Set());
       setShowInlineTagInput(false);
       setInlineTagPosition({ top: 0, left: 0 });
       setInlineTagValue('');
       setShowInlineSuggestions(false);
       setSelectedSuggestionIndex(0);
-      setTagError(null);
+      setDebouncedInlineTagValue('');
+      setDebouncedDescriptionTagQuery('');
     }
   }, [open]);
+
+  // Handle debounced inline tag search
+  useEffect(() => {
+    if (debouncedInlineTagValue && debouncedInlineTagValue.length >= 1) {
+      handleTagSearch(debouncedInlineTagValue).then(suggestions => {
+        setTagSuggestions(suggestions);
+        setShowInlineSuggestions(suggestions.length > 0);
+        setSelectedSuggestionIndex(0);
+      });
+    } else {
+      setShowInlineSuggestions(false);
+    }
+  }, [debouncedInlineTagValue]);
+
+  // Handle debounced description tag search
+  useEffect(() => {
+    if (debouncedDescriptionTagQuery && debouncedDescriptionTagQuery.length >= 1) {
+      handleTagSearch(debouncedDescriptionTagQuery).then(suggestions => {
+        setTagSuggestions(suggestions);
+        setShowInlineSuggestions(suggestions.length > 0);
+        setSelectedSuggestionIndex(0);
+      });
+    } else if (!debouncedDescriptionTagQuery) {
+      setShowInlineSuggestions(false);
+    }
+  }, [debouncedDescriptionTagQuery]);
 
   // Tag search logic
   const handleTagSearch = async (query: string) => {
@@ -141,15 +193,9 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
       setInlineTagPosition({ top, left });
     } else if (tagMatch && tagMatch[0].length > 1) {
       setInlineTagValue(tagMatch[0].slice(1));
-      const query = tagMatch[0].slice(1);
-      handleTagSearch(query).then(suggestions => {
-        setTagSuggestions(suggestions);
-        setShowInlineSuggestions(suggestions.length > 0);
-        setSelectedSuggestionIndex(0);
-      });
+      // Debounced search will handle API call
     } else {
       setShowInlineTagInput(false);
-      setShowTagDropdown(false);
       setShowInlineSuggestions(false);
     }
   };
@@ -166,13 +212,13 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
     }
     if (selectedTags.find(t => t.name === selectedTag.name)) {
       setShowInlineTagInput(false);
-      setShowTagDropdown(false);
+      // setShowTagDropdown(false);
       return;
     }
     if (selectedTags.length >= 5) {
-      setTagError('태그는 최대 5개까지 추가할 수 있습니다.');
+      // setTagError('태그는 최대 5개까지 추가할 수 있습니다.');
       setShowInlineTagInput(false);
-      setShowTagDropdown(false);
+      // setShowTagDropdown(false);
       return;
     }
     setSelectedTags(prev => [...prev, selectedTag]);
@@ -183,9 +229,9 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
     const newDescription = newBeforeCursor + afterCursor;
     setDescription(newDescription);
     setShowInlineTagInput(false);
-    setShowTagDropdown(false);
+    // setShowTagDropdown(false);
     setInlineTagValue('');
-    setCurrentTagQuery('');
+    // setCurrentTagQuery('');
     setShowInlineSuggestions(false);
     setSelectedSuggestionIndex(0);
     const newCursorPos = newBeforeCursor.length;
@@ -220,13 +266,8 @@ const SavePlaylistModal: React.FC<SavePlaylistModalProps> = ({
   const handleInlineTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInlineTagValue(value);
-    if (value.length >= 1) {
-      handleTagSearch(value).then(suggestions => {
-        setTagSuggestions(suggestions);
-        setShowInlineSuggestions(suggestions.length > 0);
-        setSelectedSuggestionIndex(0);
-      });
-    } else {
+    // Debounced search will handle API call
+    if (value.length === 0) {
       setShowInlineSuggestions(false);
     }
   };

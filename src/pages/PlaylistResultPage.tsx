@@ -1,18 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-
-interface Track {
-  id: number;
-  title: string;
-  artist: string;
-  duration: string;
-  albumCover: string;
-  spotifyUrl: string;
-  order: number;
-  album?: string;
-}
-
+import { useDebounce } from 'react-use';
 // TrackRsDto 타입 import
 import type { TrackRsDto } from '@/types/api';
 // 필요한 API 예시 import (실제 연결 시 아래 주석 참고)
@@ -101,26 +90,82 @@ const PlaylistResultPage: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [isPublic, setIsPublic] = useState(true);
-  const [playlistName] = useState('내 감정 플레이리스트');
   const [description, setDescription] = useState('');
   const [selectedTags, setSelectedTags] = useState<Array<{ id: number; name: string }>>([]);
   const [tagSuggestions, setTagSuggestions] = useState<Array<{ id: number; name: string }>>([]);
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const [currentTagQuery, setCurrentTagQuery] = useState('');
   const [cursorPosition, setCursorPosition] = useState(0);
-  const [removingTags, setRemovingTags] = useState<Set<number>>(new Set());
   const [showInlineTagInput, setShowInlineTagInput] = useState(false);
   const [inlineTagPosition, setInlineTagPosition] = useState({ top: 0, left: 0 });
   const [inlineTagValue, setInlineTagValue] = useState('');
   const [showInlineSuggestions, setShowInlineSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
 
+  // Debounced tag search states
+  const [debouncedInlineTagValue, setDebouncedInlineTagValue] = useState('');
+  const [debouncedDescriptionTagQuery, setDebouncedDescriptionTagQuery] = useState('');
+
   // 상태 추가
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [tagLoading, setTagLoading] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
+
+  // Debounce inline tag input (300ms delay)
+  useDebounce(
+    () => {
+      setDebouncedInlineTagValue(inlineTagValue);
+    },
+    300,
+    [inlineTagValue]
+  );
+
+  // Debounce description tag query (300ms delay)
+  useDebounce(
+    () => {
+      const beforeCursor = description.slice(0, cursorPosition);
+      const tagMatch = beforeCursor.match(/#[^\s]*$/);
+      if (tagMatch && tagMatch[0].length > 1) {
+        const query = tagMatch[0].slice(1);
+        setDebouncedDescriptionTagQuery(query);
+      } else {
+        setDebouncedDescriptionTagQuery('');
+      }
+    },
+    300,
+    [description, cursorPosition]
+  );
+
+  // Handle debounced inline tag search
+  useEffect(() => {
+    if (debouncedInlineTagValue.length >= 1) {
+      handleTagSearch(debouncedInlineTagValue).then(suggestions => {
+        setTagSuggestions(suggestions);
+        setShowInlineSuggestions(
+          suggestions.length > 0 ||
+            (debouncedInlineTagValue !== '' && isValidTagName(debouncedInlineTagValue))
+        );
+        setSelectedSuggestionIndex(0);
+      });
+    } else {
+      setShowInlineSuggestions(false);
+    }
+  }, [debouncedInlineTagValue]);
+
+  // Handle debounced description tag search
+  useEffect(() => {
+    if (debouncedDescriptionTagQuery.length >= 1) {
+      handleTagSearch(debouncedDescriptionTagQuery).then(suggestions => {
+        setTagSuggestions(suggestions);
+        setShowInlineSuggestions(
+          suggestions.length > 0 ||
+            (debouncedDescriptionTagQuery !== '' && isValidTagName(debouncedDescriptionTagQuery))
+        );
+        setSelectedSuggestionIndex(0);
+      });
+    } else {
+      setShowInlineSuggestions(false);
+    }
+  }, [debouncedDescriptionTagQuery]);
 
   // 트랙 삭제 핸들러: playlist와 tracks 모두에서 삭제
   const handleRemoveTrack = (id: number) => {
@@ -199,17 +244,8 @@ const PlaylistResultPage: React.FC = () => {
     } else if (tagMatch && tagMatch[0].length > 1) {
       // Update floating tag value
       setInlineTagValue(tagMatch[0].slice(1));
-
-      // Search for matching tags
-      const query = tagMatch[0].slice(1);
-      handleTagSearch(query).then(suggestions => {
-        setTagSuggestions(suggestions);
-        setShowInlineSuggestions(suggestions.length > 0 || (query !== '' && isValidTagName(query)));
-        setSelectedSuggestionIndex(0);
-      });
     } else {
       setShowInlineTagInput(false);
-      setShowTagDropdown(false);
       setShowInlineSuggestions(false);
     }
   };
@@ -233,7 +269,6 @@ const PlaylistResultPage: React.FC = () => {
     // Check if tag already exists
     if (selectedTags.find(t => t.name === selectedTag.name)) {
       setShowInlineTagInput(false);
-      setShowTagDropdown(false);
       return;
     }
 
@@ -241,7 +276,6 @@ const PlaylistResultPage: React.FC = () => {
     if (selectedTags.length >= 5) {
       alert('태그는 최대 5개까지 추가할 수 있습니다.');
       setShowInlineTagInput(false);
-      setShowTagDropdown(false);
       return;
     }
 
@@ -259,9 +293,7 @@ const PlaylistResultPage: React.FC = () => {
 
     setDescription(newDescription);
     setShowInlineTagInput(false);
-    setShowTagDropdown(false);
     setInlineTagValue('');
-    setCurrentTagQuery('');
     setShowInlineSuggestions(false);
     setSelectedSuggestionIndex(0);
 
@@ -278,47 +310,6 @@ const PlaylistResultPage: React.FC = () => {
     }, 0);
   };
 
-  // Handle keyboard navigation in tag dropdown
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (showTagDropdown) {
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (tagSuggestions.length > 0) {
-          handleTagSelect(tagSuggestions[0]);
-        } else if (currentTagQuery && isValidTagName(currentTagQuery)) {
-          // Create new tag
-          handleTagSelect({ id: 0, name: currentTagQuery }, true);
-        }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowTagDropdown(false);
-      }
-    }
-
-    // Handle inline tag input
-    if (showInlineTagInput) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowInlineTagInput(false);
-        setInlineTagValue('');
-      }
-    }
-  };
-
-  // Remove tag
-  const removeTag = (tagId: number) => {
-    setRemovingTags(prev => new Set([...prev, tagId]));
-    setTimeout(() => {
-      setSelectedTags(prev => prev.filter(tag => tag.id !== tagId));
-      setRemovingTags(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(tagId);
-        return newSet;
-      });
-    }, 300); // Animation duration
-  };
-
   // Validate tag name
   const isValidTagName = (name: string) => {
     return /^[가-힣A-Za-z0-9]+$/.test(name) && name.length < 30;
@@ -328,17 +319,6 @@ const PlaylistResultPage: React.FC = () => {
   const handleInlineTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInlineTagValue(value);
-
-    if (value.length >= 1) {
-      // Search for matching tags
-      handleTagSearch(value).then(suggestions => {
-        setTagSuggestions(suggestions);
-        setShowInlineSuggestions(suggestions.length > 0 || (value !== '' && isValidTagName(value)));
-        setSelectedSuggestionIndex(0);
-      });
-    } else {
-      setShowInlineSuggestions(false);
-    }
   };
 
   // Handle inline tag keyboard navigation
@@ -384,10 +364,6 @@ const PlaylistResultPage: React.FC = () => {
   const playerCardRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [, setPlayerHeight] = useState<number | undefined>(undefined);
-
-  // Emotion and mood state from location state
-  // const [selectedEmotion] = useState(location.state?.selectedEmotion || "즐거운 상태");
-  // const [selectedMoodChange] = useState(location.state?.selectedMoodChange || "기분 올리기");
 
   // Handle player events
   useEffect(() => {
@@ -459,16 +435,6 @@ const PlaylistResultPage: React.FC = () => {
     }, 1000) as unknown as number;
   };
 
-  // Play/pause toggle
-  // const _togglePlayPause = () => {
-  //   setIsPlaying(!isPlaying);
-  //   if (!isPlaying) {
-  //     startProgressTracking();
-  //   } else if (progressIntervalRef.current) {
-  //     clearInterval(progressIntervalRef.current);
-  //   }
-  // };
-
   // Play next track
   const playNextTrack = () => {
     if (isShuffle) {
@@ -483,59 +449,11 @@ const PlaylistResultPage: React.FC = () => {
     }
   };
 
-  // Play previous track
-  // const _playPrevTrack = () => {
-  //   if (currentTime > 3) {
-  //     setCurrentTime(0);
-  //     setProgress(0);
-  //   } else {
-  //     const prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
-  //     setCurrentTrackIndex(prevIndex);
-  //   }
-  // };
-
-  // Toggle shuffle
-
-  // Toggle repeat mode
-  // const _toggleRepeat = () => {
-  //   if (repeatMode === "none") {
-  //     setRepeatMode("all");
-  //   } else if (repeatMode === "all") {
-  //     setRepeatMode("one");
-  //   } else {
-  //     setRepeatMode("none");
-  //   }
-  // };
-
-  // Format time
-  // const _formatTime = (seconds: number) => {
-  //   const mins = Math.floor(seconds / 60);
-  //   const secs = Math.floor(seconds % 60);
-  //   return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  // };
-
   // Convert time string to seconds
   const convertTimeToSeconds = (timeStr: string) => {
     const [mins, secs] = timeStr.split(':').map(Number);
     return mins * 60 + secs;
   };
-
-  // Handle progress bar click
-  // const _handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-  //   if (!playerReady) return;
-  //   const progressBar = e.currentTarget;
-  //   const rect = progressBar.getBoundingClientRect();
-  //   const clickPosition = (e.clientX - rect.left) / rect.width;
-  //   const newTime = clickPosition * convertTimeToSeconds(playlist[currentTrackIndex].duration);
-  //   setCurrentTime(newTime);
-  //   setProgress(clickPosition * 100);
-  // };
-
-  // Handle volume change
-  // const _handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const newVolume = parseInt(e.target.value);
-  //   setVolume(newVolume);
-  // };
 
   // 플레이리스트 저장 실제 API 연동 (로딩/에러 처리 추가)
   const handleSavePlaylist = async ({
