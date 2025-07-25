@@ -1,5 +1,5 @@
 import axios, { type AxiosRequestConfig } from 'axios';
-import { refreshToken as refreshAuthToken } from './authApi';
+import { refreshAccessToken } from './tokenManager';
 import { authStorageService } from '@/services/authStorageService';
 
 const axiosInstance = axios.create({
@@ -62,7 +62,7 @@ axiosInstance.interceptors.response.use(
       // 이미 갱신 중인 경우 기존 Promise 반환
       if (!refreshPromise) {
         isRefreshing = true;
-        refreshPromise = refreshAuthToken()
+        refreshPromise = refreshAccessToken()
           .then(response => {
             const newAccessToken = response.data.accessToken;
             authStorageService.setAccessToken(newAccessToken);

@@ -1,14 +1,3 @@
-// SSO 상태 응답 타입
-export interface SSOStatusResponse {
-  authenticated: boolean;
-  userId?: number;
-  username?: string;
-  email?: string;
-  name?: string;
-  provider?: string;
-  checkedAt: string;
-}
-
 // 소셜 로그인 URL 응답 타입
 export interface SocialLoginUrls {
   google: string;
@@ -33,9 +22,6 @@ export interface AuthState {
   loading: boolean;
   error: string | null;
 }
-
-// SSO 제공자 타입
-export type SSOProvider = 'google' | 'kakao' | 'spotify';
 
 // 로그인 방식 타입
 export type LoginMethod = 'popup' | 'redirect';

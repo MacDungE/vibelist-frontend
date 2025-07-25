@@ -46,19 +46,6 @@ export const API_ENDPOINTS = {
     USER_SOCIAL: (userId: number) => `/v1/auth/${userId}/social`,
   },
 
-  // SSO 관련
-  SSO: {
-    BASE: '/v1/sso',
-    STATUS: '/v1/sso/status',
-    LOGIN_URLS: '/v1/sso/login-urls',
-    HEALTH: '/v1/sso/health',
-    REFRESH: '/v1/sso/refresh',
-    LOGOUT: '/v1/sso/logout',
-    CLAIM_TOKENS: '/v1/sso/claim-tokens',
-    CALLBACK: '/v1/sso/callback',
-    DEBUG_TOKENS: '/v1/sso/debug/tokens',
-    CLEANUP_TOKENS: '/v1/sso/admin/cleanup-tokens',
-  },
 
   // 사용자 관련
   USER: {
