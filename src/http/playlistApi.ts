@@ -10,10 +10,8 @@ const ENDPOINTS = {
 };
 
 // Spotify에 Playlist 삽입
-export const addPlaylistToSpotify = (userId: number, tracks: TrackRsDto[]): Promise<{ data: RsDataObject }> =>
-  apiClient.post(ENDPOINTS.ADD, tracks, {
-    params: { userId }
-  });
+export const addPlaylistToSpotify = (tracks: TrackRsDto[]): Promise<{ data: RsDataObject }> =>
+  apiClient.post(ENDPOINTS.ADD, tracks);
 
 // 개발자 로그인 (Spotify 로그인 리다이렉트)
 export const loginDeveloper = () => apiClient.get(ENDPOINTS.LOGIN_DEV);

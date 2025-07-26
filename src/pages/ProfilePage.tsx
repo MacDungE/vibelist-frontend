@@ -1,114 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SpotifyPlayerModal from '@/components/common/SpotifyPlayerModal';
 import PostCard from '@/components/common/PostCard';
-import type { Post } from '@/components/common/PostCard';
+import { DEFAULT_AVATAR_URL, SAMPLE_POST_IMAGES } from '@/constants/images';
 
 import { Button } from '@/components/ui/button';
 
 // Mock data for posts and liked posts
-const myPosts: Post[] = [
-  {
-    id: 1,
-    description: '조용한 새벽에 듣기 좋은 감성적인 곡들을 모았습니다',
-    likes: 24,
-    comments: 8,
-    isPrivate: false,
-    createdAt: '2일 전',
-    tags: ['Chill', 'Lofi', '감성'],
-    trackCount: 12,
-    duration: '45분',
-    spotifyUri: 'spotify:playlist:37i9dQZF1DXcBWIGoYBM5M',
-    playlist: [
-      { id: 1, artist: 'DRWN.', duration: '1:33' },
-      { id: 2, artist: 'potsu', duration: '2:10' },
-      { id: 3, artist: 'eevee', duration: '2:42' },
-    ],
-  },
-  {
-    id: 2,
-    description: '에너지 넘치는 운동용 플레이리스트',
-    thumbnail:
-      'https://readdy.ai/api/search-image?query=modern%20gym%20interior%20with%20purple%20neon%20lighting%20and%20sleek%20equipment%2C%20energetic%20workout%20atmosphere%20with%20dynamic%20lighting%20effects&width=300&height=200&seq=post2&orientation=landscape',
-    likes: 156,
-    comments: 32,
-    isPrivate: true,
-    createdAt: '5일 전',
-    tags: ['Workout', 'Energy', 'Pop'],
-    trackCount: 10,
-    duration: '38분',
-    spotifyUri: 'spotify:playlist:37i9dQZF1DX76Wlfdnj7AP',
-    playlist: [
-      { id: 1, artist: 'Kanye West', duration: '5:12' },
-      { id: 2, artist: 'David Guetta', duration: '4:05' },
-    ],
-  },
-  {
-    id: 3,
-    description: '창밖으로 내리는 비를 보며 듣기 좋은 재즈 모음',
-    thumbnail:
-      'https://readdy.ai/api/search-image?query=rainy%20window%20view%20with%20jazz%20cafe%20interior%2C%20soft%20purple%20ambient%20lighting%20and%20vintage%20music%20equipment%20in%20cozy%20atmosphere&width=300&height=200&seq=post3&orientation=landscape',
-    likes: 89,
-    comments: 15,
-    isPrivate: false,
-    createdAt: '1주 전',
-    tags: ['Jazz', 'Rainy', '감성'],
-    trackCount: 8,
-    duration: '32분',
-    spotifyUri: 'spotify:playlist:37i9dQZF1DXbITWG1ZJKYt',
-    playlist: [
-      { id: 1, artist: 'Bill Evans', duration: '5:58' },
-      { id: 2, artist: 'Miles Davis', duration: '5:37' },
-    ],
-  },
-];
-const likedPosts: Post[] = [
-  {
-    id: 4,
-    description: '숲속의 새소리와 함께하는 명상 음악',
-    thumbnail:
-      'https://readdy.ai/api/search-image?query=peaceful%20forest%20scene%20with%20soft%20purple%20morning%20light%20filtering%20through%20trees%2C%20serene%20nature%20atmosphere%20with%20gentle%20ambient%20glow&width=300&height=200&seq=liked1&orientation=landscape',
-    likes: 203,
-    comments: 45,
-    isPrivate: false,
-    createdAt: '3일 전',
-    author: '자연음악러버',
-    tags: ['Nature', 'Healing', 'Ambient'],
-    trackCount: 14,
-    duration: '50분',
-    spotifyUri: 'spotify:playlist:37i9dQZF1DWU0ScTcjJBdj',
-    playlist: [
-      { id: 1, artist: 'Nature Sound', duration: '3:20' },
-      { id: 2, artist: 'Relaxing Nature', duration: '2:45' },
-    ],
-  },
-  {
-    id: 5,
-    description: '추억의 90년대 가요 베스트 컬렉션',
-    thumbnail:
-      'https://readdy.ai/api/search-image?query=retro%2090s%20music%20studio%20with%20vintage%20equipment%20and%20purple%20neon%20lights%2C%20nostalgic%20atmosphere%20with%20classic%20recording%20gear&width=300&height=200&seq=liked2&orientation=landscape',
-    likes: 342,
-    comments: 78,
-    isPrivate: false,
-    createdAt: '1주 전',
-    author: '추억여행자',
-    tags: ['K-POP', '90s', 'Retro'],
-    trackCount: 20,
-    duration: '1시간 10분',
-    spotifyUri: 'spotify:playlist:37i9dQZF1DX9tPFwDMOaN1',
-    playlist: [
-      { id: 1, artist: '서태지와 아이들', duration: '4:12' },
-      { id: 2, artist: '김정민', duration: '4:35' },
-    ],
-  },
-];
 
 const initialProfile = {
   name: '음악러버',
   username: '@musiclover2024',
   bio: '감정에 따라 음악을 추천받고 나만의 플레이리스트를 만들어가는 중입니다. 다양한 장르의 음악을 사랑하며, 특히 새벽 감성과 재즈를 좋아해요.',
-  avatar:
-    'https://readdy.ai/api/search-image?query=professional%20portrait%20of%20young%20person%20with%20friendly%20smile%2C%20soft%20purple%20lighting%20background%2C%20modern%20aesthetic%20profile%20picture%20style&width=128&height=128&seq=avatar&orientation=squarish',
+  avatar: DEFAULT_AVATAR_URL,
   likes: 269,
 };
 
@@ -298,36 +202,7 @@ const ProfilePage: React.FC = () => {
           </button>
         </div>
         {/* Posts Content */}
-        <div className='mx-auto w-full max-w-4xl flex-1 pb-[110px]'>
-          <div className='flex flex-col gap-2'>
-            {(activeTab === 'posts' ? myPosts : likedPosts).map(post => (
-              <PostCard
-                key={post.id}
-                post={post}
-                showAuthor={activeTab === 'liked'}
-                isDarkMode={false}
-                setSpotifyModalUri={setSpotifyModalUri}
-              />
-            ))}
-            {/* Empty State */}
-            {((activeTab === 'posts' && myPosts.length === 0) ||
-              (activeTab === 'liked' && likedPosts.length === 0)) && (
-              <div className='flex flex-col items-center justify-center py-16'>
-                <i className='fas fa-music mb-4 text-5xl text-[#CCC]'></i>
-                <h3 className='mb-2 text-[16px] font-medium text-[#888]'>
-                  {activeTab === 'posts'
-                    ? '아직 포스트가 없습니다'
-                    : '아직 좋아요한 포스트가 없습니다'}
-                </h3>
-                <p className='text-[14px] text-[#BBB]'>
-                  {activeTab === 'posts'
-                    ? '첫 번째 플레이리스트를 만들어보세요!'
-                    : '마음에 드는 포스트에 좋아요를 눌러보세요!'}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <div className='mx-auto w-full max-w-4xl flex-1 pb-[110px]'></div>
         <SpotifyPlayerModal uri={spotifyModalUri} onClose={() => setSpotifyModalUri(null)} />
       </div>
     </div>

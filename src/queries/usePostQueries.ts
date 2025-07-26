@@ -1,9 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as postApi from '@/http/postApi';
-import * as likeApi from '@/http/likeApi';
 import { queryKeys } from './queryKeys';
 import type { PostCreateRequest, PostUpdateRequest } from '@/types/api';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth.ts';
+import { useInViewQuery } from '@/hooks/useInViewQuery.ts';
+import * as likeApi from '@/http/likeApi.ts';
 
 // 게시글 상세 조회
 export const usePostDetail = (postId: number) => {
@@ -83,24 +84,25 @@ export const usePostLike = (postId: number) => {
   });
 };
 
-// 게시글 좋아요 상태(내가 눌렀는지)
-export const usePostLikeStatus = (postId: number) => {
+// 화면에 보일 때만 실행되는 게시글 좋아요 상태 조회
+export const useInViewPostLikeStatus = (postId: number, inView: boolean) => {
   const { isAuthenticated, isLoading } = useAuth();
-  
-  return useQuery({
+
+  return useInViewQuery({
     queryKey: queryKeys.posts.likeStatus(postId.toString()),
     queryFn: () => likeApi.checkPostLiked(postId),
-    enabled: !!postId && isAuthenticated && !isLoading, // 로그인된 상태에서만 API 호출
+    enabled: !!postId && isAuthenticated && !isLoading,
+    inView,
     staleTime: 10 * 1000,
   });
 };
-
-// 게시글 좋아요 개수
-export const usePostLikeCount = (postId: number) => {
-  return useQuery({
+// 화면에 보일 때만 실행되는 게시글 좋아요 개수 조회
+export const useInViewPostLikeCount = (postId: number, inView: boolean) => {
+  return useInViewQuery({
     queryKey: queryKeys.posts.likeCount(postId.toString()),
     queryFn: () => likeApi.getPostLikeCount(postId),
     enabled: !!postId,
+    inView,
     staleTime: 10 * 1000,
   });
 };

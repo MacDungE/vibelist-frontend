@@ -17,7 +17,6 @@ export const useSearchPosts = (query: string, page: number, size: number) => {
     queryKey: queryKeys.explore.search(`${query}_${page}_${size}`),
     queryFn: () => exploreApi.searchPosts(query, page, size),
     enabled: !!query && query.length > 0,
-    keepPreviousData: true,
     staleTime: 2 * 60 * 1000, // 2분
   });
 };
@@ -27,7 +26,6 @@ export const useFeed = (page: number, size: number) => {
   return useQuery({
     queryKey: [...queryKeys.explore.all, 'feed', page, size],
     queryFn: () => exploreApi.getFeed(page, size),
-    keepPreviousData: true,
     staleTime: 2 * 60 * 1000, // 2분
   });
 };

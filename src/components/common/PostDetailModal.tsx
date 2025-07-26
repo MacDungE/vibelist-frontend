@@ -3,6 +3,7 @@ import type { Post } from './PostCard';
 
 import type { Comment } from '@/types/common.ts';
 import { Heart, MessageCircle, Share2 } from 'lucide-react';
+import { DEFAULT_AVATAR_SMALL_URL, DEFAULT_AVATAR_MINI_URL } from '@/constants/images';
 
 interface PostDetailModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <img
                 src={
                   post.authorAvatar ||
-                  'https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=32&height=32&seq=avatar1&orientation=squarish'
+                  DEFAULT_AVATAR_SMALL_URL
                 }
                 alt=''
                 className='h-full w-full object-cover'
@@ -180,7 +181,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   <img
                     src={
                       comment.authorAvatar ||
-                      'https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=24&height=24&seq=avatar2&orientation=squarish'
+                      DEFAULT_AVATAR_MINI_URL
                     }
                     alt='author'
                     className='mt-0.5 h-7 w-7 rounded-full object-cover'

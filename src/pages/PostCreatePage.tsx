@@ -2,25 +2,26 @@ import React, { useState, type KeyboardEvent, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PostsContext } from '@/contexts/PostsContext';
 import SavePlaylistModal from '@/components/common/SavePlaylistModal';
+import { SAMPLE_POST_THUMBNAILS } from '@/constants/images';
 
 const mockPlaylists = [
   {
     id: 1,
     name: '새벽 감성 플레이리스트',
     cover:
-      'https://readdy.ai/api/search-image?query=cozy%20midnight%20bedroom%20with%20soft%20purple%20lighting%20and%20vinyl%20records%20scattered%20on%20wooden%20desk%2C%20aesthetic%20lo-fi%20music%20vibes%20with%20warm%20ambient%20glow&width=80&height=80&seq=post1&orientation=landscape',
+      SAMPLE_POST_THUMBNAILS.MIDNIGHT_LOFI,
   },
   {
     id: 2,
     name: '운동할 때 듣는 신나는 음악',
     cover:
-      'https://readdy.ai/api/search-image?query=modern%20gym%20interior%20with%20purple%20neon%20lighting%20and%20sleek%20equipment%2C%20energetic%20workout%20atmosphere%20with%20dynamic%20lighting%20effects&width=80&height=80&seq=post2&orientation=landscape',
+      SAMPLE_POST_THUMBNAILS.GYM_WORKOUT,
   },
   {
     id: 3,
     name: '비 오는 날의 재즈',
     cover:
-      'https://readdy.ai/api/search-image?query=rainy%20window%20view%20with%20jazz%20cafe%20interior%2C%20soft%20purple%20ambient%20lighting%20and%20vintage%20music%20equipment%20in%20cozy%20atmosphere&width=80&height=80&seq=post3&orientation=landscape',
+      SAMPLE_POST_THUMBNAILS.RAINY_JAZZ,
   },
 ];
 

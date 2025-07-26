@@ -9,6 +9,7 @@ import {
   updateCurrentUserProfile,
 } from '@/http/userApi';
 import { getUserLikedPosts, getUserPosts } from '@/http/postApi';
+import { NAME_AVATAR_URL } from '@/constants/images.ts';
 
 const UserProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -200,10 +201,7 @@ const UserProfilePage: React.FC = () => {
         <section className='mx-auto mb-8 w-full'>
           <div className='flex items-center gap-8 rounded-xl border border-[var(--stroke)] bg-[var(--surface)] px-8 py-4'>
             <img
-              src={
-                profile.avatarUrl ||
-                'https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=128&height=128&seq=avatar1&orientation=squarish'
-              }
+              src={NAME_AVATAR_URL(profile.name)}
               alt='프로필'
               className='h-16 w-16 rounded-full object-cover'
             />

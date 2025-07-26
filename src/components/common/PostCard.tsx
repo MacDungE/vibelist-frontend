@@ -1,22 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useInView } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import LoginModal from './LoginModal';
 import SavePlaylistModal from './SavePlaylistModal';
 import SpotifyPlayerModal from './SpotifyPlayerModal';
+import { NAME_AVATAR_URL } from '@/constants/images';
 import {
   useCommentLike,
-  useCommentLikeCount,
-  useCommentLikeStatus,
   useComments,
   useCreateComment,
   useDeleteComment,
+  useInViewCommentLikeCount,
+  useInViewCommentLikeStatus,
   useUpdateComment,
 } from '@/queries/useCommentQueries';
 import {
+  useInViewPostLikeCount,
+  useInViewPostLikeStatus,
   usePostLike,
-  usePostLikeCount,
-  usePostLikeStatus,
   useUpdatePost,
 } from '@/queries/usePostQueries';
 import dayjs from 'dayjs';
@@ -58,19 +60,26 @@ const PostCard: React.FC<PostCardProps> = ({
   const [spotifyModalUri, setSpotifyModalUriLocal] = useState<string | null>(null);
   const location = useLocation();
 
-  // 댓글 쿼리
+  // PostCard 가시성 체크를 위한 ref
+  const postCardRef = useRef(null);
+  // 댓글 쿼리 - 화면에 보일 때만 활성화
+  const isInView = useInView(postCardRef, { margin: '50px' });
   const {
     data: comments = [],
     refetch: refetchComments,
     isLoading: isCommentsLoading,
-  } = useComments(post.id);
+  } = useComments(post.id, isInView);
   const createCommentMutation = useCreateComment();
   const updateCommentMutation = useUpdateComment();
   const deleteCommentMutation = useDeleteComment();
 
   const postId = post.id;
-  const { data: likeStatusData } = usePostLikeStatus(postId);
-  const { data: likeCountData, refetch: refetchLikeCount } = usePostLikeCount(postId);
+  // 좋아요 관련 쿼리 - 화면에 보일 때만 활성화
+  const { data: likeStatusData } = useInViewPostLikeStatus(postId, isInView);
+  const { data: likeCountData, refetch: refetchLikeCount } = useInViewPostLikeCount(
+    postId,
+    isInView
+  );
   const postLikeMutation = usePostLike(postId);
   const liked = likeStatusData?.data?.liked;
   const likeCount = likeCountData?.data?.likeCount ?? post.likeCnt;
@@ -222,10 +231,13 @@ const PostCard: React.FC<PostCardProps> = ({
     depth = 0,
     renderComments,
   }: any) => {
-    const { data: commentLikeStatusData } = useCommentLikeStatus(comment.id);
-    const { data: commentLikeCountData, refetch: refetchCommentLikeCount } = useCommentLikeCount(
-      comment.id
-    );
+    // 댓글 아이템도 화면에 보일 때만 좋아요 정보 가져오기
+    const commentRef = useRef<HTMLDivElement>(null);
+    const isCommentInView = useInView(commentRef, { margin: '50px' });
+
+    const { data: commentLikeStatusData } = useInViewCommentLikeStatus(comment.id, isCommentInView);
+    const { data: commentLikeCountData, refetch: refetchCommentLikeCount } =
+      useInViewCommentLikeCount(comment.id, isCommentInView);
     const commentLikeMutation = useCommentLike(comment.id);
     const commentLiked = commentLikeStatusData?.data?.liked;
     const commentLikeCount = commentLikeCountData?.data?.likeCount ?? comment.likeCount;
@@ -240,7 +252,7 @@ const PostCard: React.FC<PostCardProps> = ({
     };
     const [localInput, setLocalInput] = useState('');
     return (
-      <div className={`mb-2 flex items-start gap-2 ${depth > 0 ? 'ml-8' : ''}`}>
+      <div ref={commentRef} className={`mb-2 flex items-start gap-2 ${depth > 0 ? 'ml-8' : ''}`}>
         <div className='flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100'>
           <User size={18} className='text-indigo-400' />
         </div>
@@ -479,6 +491,7 @@ const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <div
+      ref={postCardRef}
       className='mb-4 rounded-[16px] p-5 font-sans'
       style={{ background: 'var(--surface)', border: '1px solid var(--stroke)' }}
     >
@@ -491,7 +504,7 @@ const PostCard: React.FC<PostCardProps> = ({
             onClick={handleAuthorClick}
           >
             <img
-              src='https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=32&height=32&seq=avatar1&orientation=squarish'
+              src={NAME_AVATAR_URL(post.userProfileName)}
               alt=''
               className='h-full w-full object-cover'
             />
