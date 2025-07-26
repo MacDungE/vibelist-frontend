@@ -1,36 +1,136 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteMe } from '@/http/userApi';
-import { getProviderDetails } from '@/constants/provider'; // 상수 임포트
+import { spotifyApi, disconnectProvider, getValidProviderIntegration } from '@/http/integrationApi';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCurrentUserSocialAccounts } from '@/queries';
+import { API_BASE_URL } from '@/constants/api';
+import { getProviderDetails } from '@/constants/provider';
+import { isEmpty } from 'lodash';
+import type { SocialAccount } from '@/types/auth.ts';
 
 interface SpotifyConnection {
   isConnected: boolean;
   accountType: 'premium' | 'free';
   username?: string;
+  scope?: string;
 }
 
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, logout } = useAuth(); // loginProvider 제거
+  const queryClient = useQueryClient();
   const [spotifyConnection, setSpotifyConnection] = useState<SpotifyConnection>({
-    isConnected: user?.provider === 'spotify', // user.provider로 변경
-    accountType: 'premium',
-    username: user?.name,
+    isConnected: false,
+    accountType: 'free',
+    username: undefined,
   });
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showApiInfoModal, setShowApiInfoModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  const handleSpotifyToggle = () => {
-    if (spotifyConnection.isConnected) {
-      // Disconnect logic
+  // 소셜 계정 정보 조회
+  const { data: socialAccounts } = useCurrentUserSocialAccounts();
+
+  const currentProvider = useMemo(() => {
+    const value: SocialAccount[] = socialAccounts?.data;
+    if (isEmpty(value)) {
+      return null;
+    }
+
+    return value.at(0)?.provider?.toLowerCase();
+  }, [socialAccounts]);
+
+  useEffect(() => {
+    console.log(socialAccounts);
+  }, [socialAccounts]);
+
+  // Spotify 유효성 검사
+  const { data: spotifyValidity } = useQuery({
+    queryKey: ['spotifyValidity'],
+    queryFn: async () => {
+      try {
+        const response = await getValidProviderIntegration('spotify');
+        return response.data;
+      } catch (error) {
+        console.error('Failed to check Spotify validity:', error);
+        return { isValid: false };
+      }
+    },
+    enabled: !!user,
+    refetchInterval: 30000, // 30초마다 유효성 재확인
+  });
+
+  // Spotify 연동 성공 후 리다이렉트 처리
+  useEffect(() => {
+    const spotifyConnected = searchParams.get('spotify_connected');
+    if (spotifyConnected === 'true') {
+      // URL 파라미터 제거
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('spotify_connected');
+      navigate(
+        {
+          pathname: '/settings',
+          search: newSearchParams.toString(),
+        },
+        { replace: true }
+      );
+
+      // Spotify 유효성 상태 다시 조회
+      queryClient.invalidateQueries({ queryKey: ['spotifyValidity'] });
+    }
+  }, [searchParams, navigate, queryClient]);
+
+  // Spotify 연동 상태 업데이트
+  useEffect(() => {
+    if (spotifyValidity !== undefined) {
+      setSpotifyConnection({
+        isConnected: spotifyValidity.isValid,
+        accountType: 'free', // 실제 계정 타입은 별도 API로 확인 필요
+        username: spotifyValidity.isValid ? user?.name : undefined,
+      });
+    }
+  }, [spotifyValidity, user]);
+
+  // Spotify 연동 해제 mutation
+  const disconnectSpotifyMutation = useMutation({
+    mutationFn: () => disconnectProvider('spotify'),
+    onSuccess: () => {
       setSpotifyConnection(prev => ({ ...prev, isConnected: false }));
+      // 유효성 상태 다시 확인
+      queryClient.invalidateQueries({ queryKey: ['spotifyValidity'] });
+    },
+    onError: error => {
+      console.error('Failed to disconnect Spotify:', error);
+      alert('Spotify 연동 해제에 실패했습니다.');
+    },
+  });
+
+  const handleSpotifyToggle = async () => {
+    if (spotifyConnection.isConnected) {
+      // 연동 해제
+      if (confirm('Spotify 연동을 해제하시겠습니까?')) {
+        disconnectSpotifyMutation.mutate();
+      }
     } else {
-      // Connect logic - start PKCE flow
-      setSpotifyConnection(prev => ({ ...prev, isConnected: true }));
+      // 연동 시작
+      setIsConnecting(true);
+      try {
+        const response = await spotifyApi.connect();
+        const redirectUrl = response.data.data.redirectUrl;
+
+        // 백엔드 URL과 결합하여 완전한 URL 생성
+        window.location.href = `${API_BASE_URL}${redirectUrl}`;
+      } catch (error) {
+        console.error('Failed to start Spotify connection:', error);
+        alert('Spotify 연동을 시작할 수 없습니다.');
+        setIsConnecting(false);
+      }
     }
   };
 
@@ -49,7 +149,7 @@ const SettingsPage: React.FC = () => {
       setShowDeleteModal(false);
       logout();
       navigate('/login');
-    } catch (e: any) {
+    } catch {
       setDeleteError('계정 삭제에 실패했습니다. 다시 시도해 주세요.');
     } finally {
       setDeleteLoading(false);
@@ -86,12 +186,14 @@ const SettingsPage: React.FC = () => {
               <div className='flex-1'>
                 <h3 className='font-semibold text-gray-800'>{user?.name || '사용자'}</h3>
                 <div className='mt-1 flex gap-2'>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${getProviderDetails(user?.provider).color}`}
-                  >
-                    <i className={`${getProviderDetails(user?.provider).icon} mr-1`}></i>
-                    {getProviderDetails(user?.provider).displayName} 로그인
-                  </span>
+                  {currentProvider && (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${getProviderDetails(currentProvider).color}`}
+                    >
+                      <i className={`${getProviderDetails(currentProvider).icon} mr-1`}></i>
+                      {getProviderDetails(currentProvider).displayName} 로그인
+                    </span>
+                  )}
                   {spotifyConnection.isConnected && (
                     <span className='inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs text-green-700'>
                       <i className='fab fa-spotify mr-1'></i>
@@ -103,7 +205,7 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Settings Sections */}
+          {/* Settings Sections  @todo 로그인한 provider 보이게하고 연동 로직 단수화 하기, 연동하는거 버튼으로 만들기*/}
           <div className='space-y-4'>
             {/* Account Section */}
             <div className='overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm'>
@@ -119,23 +221,17 @@ const SettingsPage: React.FC = () => {
                     <div>
                       <div className='font-medium text-gray-800'>Spotify 연동</div>
                       <div className='text-sm text-gray-500'>
-                        {spotifyConnection.isConnected
-                          ? `${spotifyConnection.accountType === 'premium' ? '프리미엄 ✓' : '프리 계정'}`
-                          : '음악 서비스와 연결하세요'}
+                        {spotifyConnection.isConnected ? '연동됨' : '음악 서비스와 연결하세요'}
                       </div>
                     </div>
                   </div>
                   <div className='flex items-center gap-3'>
-                    {spotifyConnection.isConnected && spotifyConnection.accountType === 'free' && (
-                      <button className='rounded-md bg-indigo-50 px-2 py-1 text-xs text-indigo-600 transition-colors hover:bg-indigo-100'>
-                        Premium 업그레이드
-                      </button>
-                    )}
                     <button
                       onClick={handleSpotifyToggle}
+                      disabled={isConnecting || disconnectSpotifyMutation.isPending}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                         spotifyConnection.isConnected ? 'bg-indigo-600' : 'bg-gray-200'
-                      }`}
+                      } disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       <span
                         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

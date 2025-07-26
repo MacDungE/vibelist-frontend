@@ -4,5 +4,4 @@ export interface User {
   name: string; // 프로필용(닉네임)
   email?: string;
   avatar: string;
-  provider: string;
 }
