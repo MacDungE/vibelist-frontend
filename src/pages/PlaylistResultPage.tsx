@@ -554,7 +554,7 @@ const PlaylistResultPage: React.FC = () => {
 
   return (
     <div
-      className='min-h-screen w-full font-sans'
+      className='min-h-screen w-full'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
       {error && (

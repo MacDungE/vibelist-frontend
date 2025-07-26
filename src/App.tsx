@@ -48,7 +48,7 @@ function App() {
       }}
     >
       <Header />
-      <main className='w-full'>
+      <main className='w-full pb-20'>
         <div className='container mx-auto flex w-full flex-1 flex-col px-4 pt-4 md:px-6'>
           <Routes>
             {/* 공개 경로 */}
