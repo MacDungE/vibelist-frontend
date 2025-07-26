@@ -92,13 +92,55 @@ export const useCommentLike = (commentId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => likeApi.toggleCommentLike(commentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.comments.likeStatus(commentId.toString()),
+    onMutate: async () => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.comments.likeStatus(commentId.toString()) });
+      await queryClient.cancelQueries({ queryKey: queryKeys.comments.likeCount(commentId.toString()) });
+      
+      // Snapshot the previous values
+      const previousLikeStatus = queryClient.getQueryData(queryKeys.comments.likeStatus(commentId.toString()));
+      const previousLikeCount = queryClient.getQueryData(queryKeys.comments.likeCount(commentId.toString()));
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(queryKeys.comments.likeStatus(commentId.toString()), (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            liked: !old.data.liked
+          }
+        };
       });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.comments.likeCount(commentId.toString()),
+      
+      queryClient.setQueryData(queryKeys.comments.likeCount(commentId.toString()), (old: any) => {
+        if (!old) return old;
+        const currentLiked = previousLikeStatus?.data?.liked || false;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            likeCount: currentLiked ? Math.max(0, old.data.likeCount - 1) : old.data.likeCount + 1
+          }
+        };
       });
+      
+      // Return a context object with the snapshotted values
+      return { previousLikeStatus, previousLikeCount };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousLikeStatus) {
+        queryClient.setQueryData(queryKeys.comments.likeStatus(commentId.toString()), context.previousLikeStatus);
+      }
+      if (context?.previousLikeCount) {
+        queryClient.setQueryData(queryKeys.comments.likeCount(commentId.toString()), context.previousLikeCount);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments.likeStatus(commentId.toString()) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments.likeCount(commentId.toString()) });
     },
   });
 };
