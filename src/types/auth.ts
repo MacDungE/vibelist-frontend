@@ -5,6 +5,9 @@ export interface SocialLoginUrls {
   spotify: string;
 }
 
+// 사용자 역할 타입
+export type Role = 'USER' | 'ADMIN';
+
 // 사용자 정보 타입 (기존 User 타입과 호환)
 export interface User {
   id: number;
@@ -13,6 +16,39 @@ export interface User {
   name: string;
   provider: string;
   avatar?: string;
+}
+
+// 사용자 DTO 타입 (백엔드 UserDto와 매핑)
+export interface UserDto {
+  /** 사용자 고유 ID */
+  userId: number;
+
+  /** 사용자명 */
+  username: string;
+
+  /** 사용자 역할 (USER, ADMIN 등) */
+  role: Role;
+
+  /** 사용자 이메일 주소 */
+  email: string;
+
+  /** 사용자 실명 */
+  name: string;
+
+  /** 사용자 전화번호 */
+  phone?: string;
+
+  /** 사용자 프로필 이미지 URL */
+  avatarUrl?: string;
+
+  /** 사용자 자기소개 */
+  bio?: string;
+
+  /** 계정 생성 시간 */
+  createdAt: string;
+
+  /** 계정 정보 수정 시간 */
+  updatedAt: string;
 }
 
 // 인증 상태 타입

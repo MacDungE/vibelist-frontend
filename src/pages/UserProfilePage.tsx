@@ -2,22 +2,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PostCard from '@/components/common/PostCard';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  getCurrentUserInfo,
-  getUserInfo,
-  searchUsers,
-  updateCurrentUserProfile,
-} from '@/http/userApi';
+import { updateCurrentUserProfile } from '@/http/userApi';
 import { getUserLikedPosts, getUserPosts } from '@/http/postApi';
 import { NAME_AVATAR_URL } from '@/constants/images.ts';
+import { useUserProfileByUsername } from '@/queries/useUserQueries.ts';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/queries';
 
 const UserProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
+  // const [profile, setProfile] = useState<any>(null);
   const [isMine, setIsMine] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'posts' | 'likes'>('posts');
   const [posts, setPosts] = useState<any[]>([]);
@@ -34,6 +32,8 @@ const UserProfilePage: React.FC = () => {
   const [size] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
+  const { data: profile, isLoading: loading } = useUserProfileByUsername(username);
 
   useEffect(() => {
     if (!username) return;
@@ -41,45 +41,8 @@ const UserProfilePage: React.FC = () => {
       navigate('/login');
       return;
     }
-    setLoading(true);
-    setError(null);
-    if (user?.username === username) {
-      setIsMine(true);
-      getCurrentUserInfo()
-        .then(res => {
-          setProfile(res.data);
-          setLoading(false);
-        })
-        .catch(() => {
-          setError('내 프로필 정보를 불러오지 못했습니다.');
-          setLoading(false);
-        });
-    } else {
-      setIsMine(false);
-      searchUsers(username)
-        .then(res => {
-          const found = res.data.data.find((u: any) => u.username === username);
-          if (found) {
-            getUserInfo(found.userId)
-              .then(res2 => {
-                setProfile(res2.data);
-                setLoading(false);
-              })
-              .catch(() => {
-                setError('유저 정보를 불러오지 못했습니다.');
-                setLoading(false);
-              });
-          } else {
-            setError('존재하지 않는 유저입니다.');
-            setLoading(false);
-          }
-        })
-        .catch(() => {
-          setError('유저 정보를 불러오지 못했습니다.');
-          setLoading(false);
-        });
-    }
-  }, [username, user]);
+    setIsMine(username === user.username);
+  }, [user, username]);
 
   useEffect(() => {
     if (profile && isMine) {
@@ -96,7 +59,8 @@ const UserProfilePage: React.FC = () => {
       await updateCurrentUserProfile({ name: editName, bio: editBio, avatarUrl: editAvatar });
       setShowEditModal(false);
       // 프로필 정보 새로고침
-      getCurrentUserInfo().then(res => setProfile(res.data));
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.user.all, 'profile'] });
+      // getCurrentUserInfo().then(res => setProfile(res.data));
     } catch (e) {
       setEditError('프로필 수정에 실패했습니다.');
     } finally {

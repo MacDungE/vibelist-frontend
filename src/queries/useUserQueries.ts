@@ -22,6 +22,17 @@ export const useSearchUsers = (name: string) => {
   });
 };
 
+/**
+ * username으로 profile 얻기
+ */
+export const useUserProfileByUsername = (username?: string) => {
+  return useQuery({
+    queryKey: [...queryKeys.user.all, 'profile', username],
+    queryFn: () => (username ? userApi.getUserProfile(username) : null),
+    enabled: !!username,
+  });
+};
+
 // 모든 사용자 목록 조회 (관리자용)
 export const useAllUsers = () => {
   return useQuery({
@@ -85,7 +96,7 @@ export const useUpdateUserProfile = () => {
 };
 
 // 현재 사용자 삭제
-export const useDeleteCurrentUser = () => {
+/*export const useDeleteCurrentUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -95,7 +106,7 @@ export const useDeleteCurrentUser = () => {
       queryClient.clear();
     },
   });
-};
+};*/
 
 // 특정 사용자 삭제 (관리자용)
 export const useDeleteUser = () => {

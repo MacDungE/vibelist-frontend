@@ -10,7 +10,7 @@ export const queryKeys = {
 
   // 사용자 관련
   user: {
-    all: ['user'] as const,
+    all: ['users'] as const,
     profile: (userId?: string) => [...queryKeys.user.all, 'profile', userId] as const,
     settings: () => [...queryKeys.user.all, 'settings'] as const,
   },

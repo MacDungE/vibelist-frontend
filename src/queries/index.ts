@@ -38,7 +38,6 @@ export {
   useCreateUser,
   useUpdateCurrentUserProfile,
   useUpdateUserProfile,
-  useDeleteCurrentUser,
   useDeleteUser,
 } from './useUserQueries';
 
