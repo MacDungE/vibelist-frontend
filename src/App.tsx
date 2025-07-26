@@ -8,7 +8,6 @@ import AuthGuard from '@/components/AuthGuard';
 import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
-import ProfilePage from '@/pages/ProfilePage';
 import ExplorePage from '@/pages/ExplorePage';
 import PostCreatePage from '@/pages/PostCreatePage';
 import SettingsPage from '@/pages/SettingsPage';
@@ -70,14 +69,6 @@ function App() {
               element={
                 <AuthGuard>
                   <PostCreatePage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path='/profile'
-              element={
-                <AuthGuard>
-                  <ProfilePage />
                 </AuthGuard>
               }
             />
