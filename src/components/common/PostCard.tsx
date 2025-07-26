@@ -23,48 +23,13 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
 import { ChevronDown, ChevronUp, Heart, Lock, MessageCircle, Music, User } from 'lucide-react';
+import type { PostDetailResponse } from '@/types/api.ts';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
 
-export type Track = {
-  id: number;
-  artist: string;
-  duration: string;
-  cover?: string;
-  album?: string;
-};
-
-export type Post = {
-  id: number;
-  description: string;
-  likes: number;
-  comments: number;
-  isPrivate: boolean;
-  createdAt: string;
-  tags: string[];
-  trackCount?: number;
-  duration?: string;
-  spotifyUri?: string;
-  playlist: Track[];
-  user: {
-    name: string; // 닉네임/이름
-    username: string; // 아이디
-    avatar?: string;
-    [key: string]: any;
-  };
-  commentsPreview?: Array<{
-    id: number;
-    username?: string;
-    userProfileName?: string;
-    content: string;
-    createdAt: string;
-  }>;
-  commentsCount?: number;
-};
-
 interface PostCardProps {
-  post: Post;
+  post: PostDetailResponse;
   showAuthor?: boolean;
   isDarkMode?: boolean;
   setSpotifyModalUri?: (uri: string) => void;
@@ -108,19 +73,7 @@ const PostCard: React.FC<PostCardProps> = ({
   const { data: likeCountData, refetch: refetchLikeCount } = usePostLikeCount(postId);
   const postLikeMutation = usePostLike(postId);
   const liked = likeStatusData?.data?.liked;
-  const likeCount = likeCountData?.data?.likeCount ?? post.likes;
-
-  // CustomUserDetails 생성 (임시: 권한 등은 하드코딩)
-  const getCustomUserDetails = () => ({
-    enabled: true,
-    id: user?.id ? Number(user.id) : 0,
-    password: '',
-    authorities: [{ authority: 'USER' }],
-    username: user?.name || user?.email || '',
-    accountNonExpired: true,
-    accountNonLocked: true,
-    credentialsNonExpired: true,
-  });
+  const likeCount = likeCountData?.data?.likeCount ?? post.likeCnt;
 
   // 댓글 등록/대댓글
   const handleAddComment = async (e: React.FormEvent, parentId?: number, inputValue?: string) => {
@@ -177,21 +130,17 @@ const PostCard: React.FC<PostCardProps> = ({
   };
 
   const navigate = useNavigate();
-  const emotion = post.emotion || '무기력한 상태';
-  const mood = post.mood || '반대 기분';
 
-  const playlistLength = post.playlist?.length || 0;
-  // 대표 곡 이미지(첫 곡 cover) 우선 사용
+  const playlistLength = post.playlist?.tracks?.length || 0;
+  // 대표 곡 이미지(첫 곡 imageUrl) 우선 사용
   const playlistCover =
     post.playlist?.tracks?.[0]?.imageUrl ||
-    post.playlist?.tracks?.[0]?.albumCover ||
-    post.playlist?.tracks?.[0]?.cover ||
     'https://i.scdn.co/image/ab67616d0000b27309a857d20020536deb494427';
-  const playlistArtist = post.playlist?.[0]?.artist || '';
+  const playlistArtist = post.playlist?.tracks?.[0]?.artist || '';
   const [dominantColor, setDominantColor] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // dominant color 추출 함수, getContrastTextColor 등은 그대로 유지
+  // dominant color 추출 함수
   function getDominantColor(img: HTMLImageElement): string | null {
     try {
       const canvas = document.createElement('canvas');
@@ -209,6 +158,7 @@ const PostCard: React.FC<PostCardProps> = ({
       return null;
     }
   }
+
   useEffect(() => {
     if (imgRef.current) {
       imgRef.current.onload = () => {
@@ -221,6 +171,7 @@ const PostCard: React.FC<PostCardProps> = ({
       }
     }
   }, [playlistCover]);
+
   function getContrastTextColor(bg: string | null, opacity: number = 1) {
     if (!bg) return `rgba(34,34,34,${opacity})`;
     // 밝은 회색 계열이면 무조건 검정
@@ -241,24 +192,16 @@ const PostCard: React.FC<PostCardProps> = ({
     // 밝으면 어두운색, 어두우면 흰색
     return yiq >= 180 ? `rgba(34,34,34,${opacity})` : `rgba(255,255,255,${opacity})`;
   }
+
   const handleAuthorClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (post.user && post.user.username && post.user.username !== '나') {
-      navigate(`/${post.user.username}`);
+    if (post.userName && post.userName !== '나') {
+      navigate(`/${post.userName}`);
     }
-  };
-  const requireLogin = (message: string) => {
-    if (!isAuthenticated) {
-      setLoginModalMessage(message);
-      setShowLoginModal(true);
-      return true;
-    }
-    return false;
   };
 
-  const [replyTo, setReplyTo] = useState<number | null>(null); // 대댓글 입력창 노출용
-  const [editId, setEditId] = useState<number | null>(null); // 수정중인 댓글 id
-  const [editContent, setEditContent] = useState('');
+  const [replyTo, setReplyTo] = useState<number | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
 
   // 대댓글 단일 항목 컴포넌트 (재귀)
   const CommentItem = ({
@@ -306,7 +249,6 @@ const PostCard: React.FC<PostCardProps> = ({
             <div className='text-sm font-medium text-gray-800'>
               {comment.username || comment.userProfileName}
             </div>
-            {/* 댓글 좋아요 버튼 */}
             <button
               className='ml-2 flex items-center gap-1 text-[15px] text-[#888]'
               onClick={handleCommentLike}
@@ -465,9 +407,9 @@ const PostCard: React.FC<PostCardProps> = ({
 
   // 포스트 수정/삭제 권한: user.username === post.userName
   const canEditPost =
-    user && post && user.username && post.user && user.username === post.user.username;
+    user && post && user.username && post.userName && user.username === post.userName;
 
-  // 포스트 수정/삭제 상태 (중복 선언 제거)
+  // 포스트 수정/삭제 상태
   const [showEditModal, setShowEditModal] = useState(false);
   const updatePostMutation = useUpdatePost();
   const handleEditPost = () => setShowEditModal(true);
@@ -492,8 +434,16 @@ const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  // 재생시간 포맷 함수
-  function formatDuration(sec: number) {
+  // 재생시간 포맷 함수 (밀리초 → 분:초)
+  function formatDuration(durationMs: number) {
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // 전체 재생시간 포맷 함수
+  function formatTotalDuration(sec: number) {
     const hours = Math.floor(sec / 3600);
     const minutes = Math.floor((sec % 3600) / 60);
     const seconds = sec % 60;
@@ -509,7 +459,6 @@ const PostCard: React.FC<PostCardProps> = ({
   // dominantColor가 너무 어두우면 밝은 색으로 fallback
   function getPlaylistBgColor() {
     if (!dominantColor) return '#f5f5f5';
-    // rgb(19,21,20) 등 너무 어두우면 밝은 회색으로
     const match = dominantColor.match(/rgb\((\d+),(\d+),(\d+)\)/);
     if (!match) return dominantColor;
     const r = parseInt(match[1], 10);
@@ -542,10 +491,7 @@ const PostCard: React.FC<PostCardProps> = ({
             onClick={handleAuthorClick}
           >
             <img
-              src={
-                post.user?.avatar ||
-                'https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=32&height=32&seq=avatar1&orientation=squarish'
-              }
+              src='https://readdy.ai/api/search-image?query=professional%20portrait%20minimal%20avatar&width=32&height=32&seq=avatar1&orientation=squarish'
               alt=''
               className='h-full w-full object-cover'
             />
@@ -553,18 +499,16 @@ const PostCard: React.FC<PostCardProps> = ({
           <div className='cursor-pointer' onClick={handleAuthorClick}>
             <div className='flex items-center gap-2'>
               <span className='text-[15px] font-bold' style={{ color: 'var(--text-primary)' }}>
-                {post.user?.name || '이름없음'}
+                {post.userProfileName || '이름없음'}
               </span>
-              {post.user?.username && (
-                <span className='text-xs text-gray-400'>@{post.user.username}</span>
-              )}
+              {post.userName && <span className='text-xs text-gray-400'>@{post.userName}</span>}
             </div>
             <p className='text-[13px]' style={{ color: 'var(--text-secondary)' }}>
               {dayjs(post.createdAt).fromNow()}
             </p>
           </div>
         </div>
-        {post.isPrivate && (
+        {!post.isPublic && (
           <div
             className='flex items-center gap-1 rounded-full px-2 py-1 text-[12px]'
             style={{ background: 'var(--surface-alt)', color: 'var(--text-secondary)' }}
@@ -591,22 +535,20 @@ const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
       </div>
-      {/* 포스트 수정 폼 (인라인) */}
+
+      {/* 포스트 수정 폼 */}
       <SavePlaylistModal
         open={showEditModal}
         onClose={handleCloseEditModal}
         playlist={
           Array.isArray(post.playlist?.tracks) && post.playlist.tracks.length > 0
             ? post.playlist.tracks.map((track, idx) => ({
-                id: track.id ?? idx + 1,
-                title: track.title ?? '제목 없음',
-                artist: track.artist ?? '',
-                duration: track.duration ?? '',
-                albumCover:
-                  track.cover ??
-                  track.albumCover ??
-                  'https://via.placeholder.com/64x64?text=No+Track',
-                spotifyUrl: track.spotifyUrl ?? '',
+                id: parseInt(track.trackId) || idx + 1,
+                title: track.title || '제목 없음',
+                artist: track.artist || '',
+                duration: formatDuration(track.durationMs),
+                albumCover: track.imageUrl || 'https://via.placeholder.com/64x64?text=No+Track',
+                spotifyUrl: '',
                 order: idx + 1,
                 album: track.album,
               }))
@@ -622,10 +564,10 @@ const PostCard: React.FC<PostCardProps> = ({
                 },
               ]
         }
-        initialDescription={post.description}
+        initialDescription={post.content}
         initialTags={(post.tags || []).map((t, i) => ({ id: i + 1, name: t }))}
-        isPublic={!post.isPrivate}
-        loading={updatePostMutation.isLoading}
+        isPublic={post.isPublic}
+        loading={updatePostMutation.isPending}
         error={updatePostMutation.isError ? '포스트 수정에 실패했습니다.' : undefined}
         onSave={({ description, tags, isPublic }) =>
           handleSaveEditPost({
@@ -635,14 +577,16 @@ const PostCard: React.FC<PostCardProps> = ({
             tags: tags.map(t => t.name),
           })
         }
-        authorUsername={post.user?.username}
-        authorAvatar={post.user?.avatar}
+        authorUsername={post.userName}
+        authorAvatar=''
         isEditMode={true}
       />
+
       {/* Description */}
       <p className='mb-3 line-clamp-2 text-[15px]' style={{ color: 'var(--text-secondary)' }}>
-        {post.description}
+        {post.content}
       </p>
+
       {/* Playlist Preview Section */}
       <div
         className='mb-4 flex flex-col gap-2 rounded-[12px] px-4 py-3'
@@ -678,14 +622,14 @@ const PostCard: React.FC<PostCardProps> = ({
                     : ''}
               </span>
             </div>
-            {/* 총 재생시간, 스포티파이 버튼, 펼치기 버튼 한 줄: 총 n분은 왼쪽, 버튼 2개는 오른쪽 정렬 */}
+            {/* 총 재생시간, 스포티파이 버튼, 펼치기 버튼 */}
             <div className='mt-2 flex items-center justify-between gap-2'>
               {post.playlist?.totalLengthSec && (
                 <span
                   className='text-xs font-semibold'
                   style={{ color: getContrastTextColor(getPlaylistBgColor()) }}
                 >
-                  {formatDuration(post.playlist.totalLengthSec)}
+                  {formatTotalDuration(post.playlist.totalLengthSec)}
                 </span>
               )}
               <div className='flex items-center gap-2'>
@@ -751,7 +695,7 @@ const PostCard: React.FC<PostCardProps> = ({
               {post.playlist?.tracks && post.playlist.tracks.length > 0 ? (
                 post.playlist.tracks.map((track, idx) => (
                   <li
-                    key={track.id || idx}
+                    key={track.trackId || idx}
                     className='flex items-center gap-3 py-2'
                     style={{
                       borderBottom:
@@ -761,7 +705,7 @@ const PostCard: React.FC<PostCardProps> = ({
                     }}
                   >
                     <img
-                      src={track.imageUrl || track.albumCover || track.cover || playlistCover}
+                      src={track.imageUrl || playlistCover}
                       alt={track.artist}
                       className='h-10 w-10 shrink-0 rounded-[6px] border border-[#E5E5E5] object-cover'
                     />
@@ -781,7 +725,7 @@ const PostCard: React.FC<PostCardProps> = ({
                       className='ml-2 text-right text-[13px]'
                       style={{ color: getContrastTextColor(getPlaylistBgColor()) }}
                     >
-                      {track.duration}
+                      {formatDuration(track.durationMs)}
                     </span>
                   </li>
                 ))
@@ -797,7 +741,8 @@ const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
       </div>
-      {/* 태그 뱃지 (플레이리스트 미리보기 아래로 이동) */}
+
+      {/* 태그 뱃지 */}
       {post.tags && post.tags.length > 0 && (
         <div className='mb-2 flex flex-wrap gap-1'>
           {post.tags.map(tag => (
@@ -810,10 +755,12 @@ const PostCard: React.FC<PostCardProps> = ({
           ))}
         </div>
       )}
-      {/* SpotifyPlayerModal (내부 상태 관리용) */}
+
+      {/* SpotifyPlayerModal */}
       {spotifyModalUri && !setSpotifyModalUri && (
         <SpotifyPlayerModal uri={spotifyModalUri} onClose={() => setSpotifyModalUriLocal(null)} />
       )}
+
       {/* Footer Actions */}
       <div className='mt-2 flex items-center justify-between'>
         <div className='flex items-center gap-4'>
@@ -841,6 +788,7 @@ const PostCard: React.FC<PostCardProps> = ({
           </button>
         </div>
       </div>
+
       {/* 댓글 미리보기 */}
       {showCommentsPreview && (
         <div className='mt-4 border-t border-[var(--stroke)] pt-4'>
@@ -864,13 +812,14 @@ const PostCard: React.FC<PostCardProps> = ({
             <button
               type='submit'
               className='rounded-lg bg-[var(--primary)] px-3 py-1 text-xs font-semibold text-white'
-              disabled={createCommentMutation.isLoading}
+              disabled={createCommentMutation.isPending}
             >
               등록
             </button>
           </form>
         </div>
       )}
+
       {/* Login Modal */}
       <LoginModal
         isOpen={showLoginModal}

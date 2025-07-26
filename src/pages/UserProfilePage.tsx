@@ -122,6 +122,16 @@ const UserProfilePage: React.FC = () => {
     return () => observer.disconnect();
   }, [tab, postsLoading, likesLoading, page, totalPages]);
 
+  // 포스트 데이터 매핑 헬퍼 함수
+  const mapPostData = (post: any, isLikedPost = false) => ({
+    ...post,
+    user: post.user || {
+      name: post.userProfileName || post.userName || '',
+      username: post.userName || '',
+      avatar: isLikedPost ? post.avatarUrl || '' : profile?.avatarUrl || '',
+    },
+  });
+
   // posts/likedPosts append 구조로 변경
   useEffect(() => {
     if (!username) return;
@@ -129,28 +139,8 @@ const UserProfilePage: React.FC = () => {
     getUserPosts(username, page, size)
       .then(res => {
         const data = res.data.data;
-        setPosts(prev =>
-          page === 0
-            ? (data.content || []).map((post: any) => ({
-                ...post,
-                user: post.user || {
-                  name: post.userProfileName || post.userName || '',
-                  username: post.userName || '',
-                  avatar: profile?.avatarUrl || '',
-                },
-              }))
-            : [
-                ...prev,
-                ...(data.content || []).map((post: any) => ({
-                  ...post,
-                  user: post.user || {
-                    name: post.userProfileName || post.userName || '',
-                    username: post.userName || '',
-                    avatar: profile?.avatarUrl || '',
-                  },
-                })),
-              ]
-        );
+        const mappedPosts = (data.content ?? []).map(mapPostData);
+        setPosts(prev => (page === 0 ? mappedPosts : [...prev, ...mappedPosts]));
         setTotalPages(data.totalPages);
         setPostsLoading(false);
       })
@@ -167,28 +157,8 @@ const UserProfilePage: React.FC = () => {
     getUserLikedPosts(username, page, size)
       .then(res => {
         const data = res.data.data;
-        setLikedPosts(prev =>
-          page === 0
-            ? (data.content || []).map((post: any) => ({
-                ...post,
-                user: post.user || {
-                  name: post.userProfileName || post.userName || '',
-                  username: post.userName || '',
-                  avatar: post.avatarUrl || '',
-                },
-              }))
-            : [
-                ...prev,
-                ...(data.content || []).map((post: any) => ({
-                  ...post,
-                  user: post.user || {
-                    name: post.userProfileName || post.userName || '',
-                    username: post.userName || '',
-                    avatar: post.avatarUrl || '',
-                  },
-                })),
-              ]
-        );
+        const mappedPosts = (data.content || []).map((post: any) => mapPostData(post, true));
+        setLikedPosts(prev => (page === 0 ? mappedPosts : [...prev, ...mappedPosts]));
         setTotalPages(data.totalPages);
         setLikesLoading(false);
       })

@@ -57,6 +57,7 @@ export interface PostDetailResponse {
   userName: string;
   userProfileName: string;
   content: string;
+  tags: string[];
   isPublic: boolean;
   likeCnt: number;
   viewCnt: number;
@@ -155,7 +156,6 @@ export interface LoginRequest {
   password: string;
 }
 
-
 export interface CompleteSocialSignupRequest {
   username: string;
   provider: string;
@@ -168,7 +168,6 @@ export interface StatusResponse {
   email?: string;
   name?: string;
 }
-
 
 // 외부 서비스 연동 관련
 export type IntegrationProvider = 'spotify' | 'google';
