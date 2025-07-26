@@ -18,18 +18,20 @@ function Header() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
   return (
-    <header className="w-full sticky top-0 z-50" style={{ background: 'var(--surface)' }}>
-      <div className="max-w-[1440px] mx-auto px-4 md:px-6 flex items-center justify-between h-[var(--header-height,5rem)] relative">
+    <header className='sticky top-0 z-50 w-full' style={{ background: 'var(--surface)' }}>
+      <div className='relative mx-auto flex h-[var(--header-height,5rem)] max-w-[1440px] items-center justify-between px-4 md:px-6'>
         {/* 좌측 여백 */}
-        <div className="w-10 h-10 flex-shrink-0"></div>
+        <div className='h-10 w-10 flex-shrink-0'></div>
         {/* 중앙 로고 */}
-        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl lg:text-4xl font-bold tracking-[-0.01em] bg-clip-text text-transparent bg-gradient-to-r from-[#BFA9F2] to-[#C7B6FF] select-none">VibeList</h1>
+        <h1 className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-[#BFA9F2] to-[#C7B6FF] bg-clip-text text-3xl font-bold tracking-[-0.01em] text-transparent select-none lg:text-4xl'>
+          VibeList
+        </h1>
         {/* 우측 토글 버튼 */}
-        <button
+        {/* <button
           onClick={toggleTheme}
           aria-label={theme === 'dark' ? '라이트모드로 전환' : '다크모드로 전환'}
           className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[var(--surface-alt)] transition ml-auto"
@@ -40,9 +42,9 @@ function Header() {
           ) : (
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           )}
-        </button>
+        </button>*/}
       </div>
     </header>
   );
 }
-export default Header; 
+export default Header;
