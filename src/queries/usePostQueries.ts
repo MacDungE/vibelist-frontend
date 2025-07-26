@@ -5,6 +5,7 @@ import type { PostCreateRequest, PostUpdateRequest } from '@/types/api';
 import { useAuth } from '@/hooks/useAuth.ts';
 import { useInViewQuery } from '@/hooks/useInViewQuery.ts';
 import * as likeApi from '@/http/likeApi.ts';
+import { createOptimisticLikeMutation } from './utils/likeUtils';
 
 // 게시글 상세 조회
 export const usePostDetail = (postId: number) => {
@@ -75,58 +76,14 @@ export const useDeletePost = () => {
 // 게시글 좋아요 토글
 export const usePostLike = (postId: number) => {
   const queryClient = useQueryClient();
+  
   return useMutation({
     mutationFn: () => likeApi.togglePostLike(postId),
-    onMutate: async () => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.posts.likeStatus(postId.toString()) });
-      await queryClient.cancelQueries({ queryKey: queryKeys.posts.likeCount(postId.toString()) });
-      
-      // Snapshot the previous values
-      const previousLikeStatus = queryClient.getQueryData(queryKeys.posts.likeStatus(postId.toString()));
-      const previousLikeCount = queryClient.getQueryData(queryKeys.posts.likeCount(postId.toString()));
-      
-      // Optimistically update to the new value
-      queryClient.setQueryData(queryKeys.posts.likeStatus(postId.toString()), (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            liked: !old.data.liked
-          }
-        };
-      });
-      
-      queryClient.setQueryData(queryKeys.posts.likeCount(postId.toString()), (old: any) => {
-        if (!old) return old;
-        const currentLiked = previousLikeStatus?.data?.liked || false;
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            likeCount: currentLiked ? Math.max(0, old.data.likeCount - 1) : old.data.likeCount + 1
-          }
-        };
-      });
-      
-      // Return a context object with the snapshotted values
-      return { previousLikeStatus, previousLikeCount };
-    },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      if (context?.previousLikeStatus) {
-        queryClient.setQueryData(queryKeys.posts.likeStatus(postId.toString()), context.previousLikeStatus);
-      }
-      if (context?.previousLikeCount) {
-        queryClient.setQueryData(queryKeys.posts.likeCount(postId.toString()), context.previousLikeCount);
-      }
-    },
-    onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts.likeStatus(postId.toString()) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts.likeCount(postId.toString()) });
-    },
+    ...createOptimisticLikeMutation(
+      queryClient,
+      queryKeys.posts.likeStatus(postId.toString()),
+      queryKeys.posts.likeCount(postId.toString())
+    ),
   });
 };
 
