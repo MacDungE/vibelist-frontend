@@ -1,49 +1,86 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useDebounce } from 'react-use';
 import PostCard from '@/components/common/PostCard';
-import { getTrends } from '@/http/exploreApi';
-import type { PostDetailResponse, TrendResponse } from '@/types/api';
-import { useFeed, useSearchPosts } from '@/queries/useExploreQueries';
+import type { PagePostDetailResponse, PostDetailResponse } from '@/types/api';
+import { useFeed, useSearchPosts, useTrends } from '@/queries/useExploreQueries';
 
 const PAGE_SIZE = 10;
 
+/*export const toPostCardData = (post: PostDetailResponse) => ({
+  id: post.id,
+  description: post.content ?? '',
+  likes: post.likeCnt ?? 0,
+  comments: 0, // 댓글 수 별도 API 필요
+  isPrivate: !post.isPublic,
+  createdAt: post.createdAt ?? '',
+  tags: Array.isArray((post as any).tags) ? (post as any).tags : [],
+  playlist: {
+    tracks: Array.isArray(post.playlist?.tracks)
+      ? post.playlist.tracks.map((track, idx) => ({
+          id: track.trackId || idx + 1,
+          artist: track.artist ?? '',
+          duration:
+            typeof track.durationMs === 'number'
+              ? `${Math.floor(track.durationMs / 60000)}:${String(Math.floor((track.durationMs % 60000) / 1000)).padStart(2, '0')}`
+              : '0:00',
+          cover: track.imageUrl ?? '',
+          title: track.title ?? '',
+          album: track.album ?? '',
+        }))
+      : [],
+    totalTracks:
+      typeof post.playlist?.totalTracks === 'number' ? post.playlist.totalTracks : undefined,
+    totalLengthSec:
+      typeof post.playlist?.totalLengthSec === 'number' ? post.playlist.totalLengthSec : undefined,
+    spotifyUrl: post.playlist?.spotifyUrl ?? '',
+  },
+  user: {
+    name: post?.name || post.userProfileName || post.userName || '',
+    username: post?.username || post.userName || '',
+    avatar: post?.avatarUrl || post?.userProfileImage || '',
+  },
+});*/
+
 const ExplorePage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // 스크롤 위치 복원
   useEffect(() => {
-    if (location.state && location.state.scrollY !== undefined) {
+    if (location.state?.scrollY !== undefined) {
       window.scrollTo(0, location.state.scrollY);
     }
   }, [location.state]);
-  const navigate = useNavigate();
-  // 트렌드 기존대로
-  const [trendList, setTrendList] = useState<TrendResponse[]>([]);
-  const [trendLoading, setTrendLoading] = useState(true);
-  const [trendError, setTrendError] = useState<string | null>(null);
 
-  // 검색어
+  // 검색어 상태
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-
-  // 검색어 디바운스 (500ms 지연)
-  useDebounce(
-    () => {
-      setDebouncedSearch(searchInput);
-    },
-    500,
-    [searchInput]
-  );
+  const prevDebouncedSearchRef = useRef('');
 
   // 무한스크롤 상태
   const [feedPage, setFeedPage] = useState(0);
-  const [feedList, setFeedList] = useState<PostDetailResponse[]>([]);
-  const [feedLast, setFeedLast] = useState(false);
+  const [feedItems, setFeedItems] = useState<PostDetailResponse[]>([]);
+  const [feedIsLast, setFeedIsLast] = useState(false);
 
   const [searchPage, setSearchPage] = useState(0);
-  const [searchList, setSearchList] = useState<PostDetailResponse[]>([]);
-  const [searchLast, setSearchLast] = useState(false);
+  const [searchItems, setSearchItems] = useState<PostDetailResponse[]>([]);
+  const [searchIsLast, setSearchIsLast] = useState(false);
 
-  // 쿼리 훅
+  // 현재 활성화된 모드
+  const isSearchMode = !!debouncedSearch;
+
+  // 검색어 디바운스 처리
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // React Query 훅들
+  const { data: trendData, isLoading: trendLoading, isError: trendError } = useTrends(10);
+
   const {
     data: feedData,
     isLoading: feedLoading,
@@ -58,154 +95,128 @@ const ExplorePage: React.FC = () => {
     isFetching: searchFetching,
   } = useSearchPosts(debouncedSearch, searchPage, PAGE_SIZE);
 
-  // 트렌드 기존대로
-  useEffect(() => {
-    setTrendLoading(true);
-    setTrendError(null);
-    getTrends(10)
-      .then(res => {
-        // rank 오름차순 정렬
-        const sorted = Array.isArray(res) ? [...res].sort((a, b) => a.rank - b.rank) : [];
-        setTrendList(sorted);
-        setTrendLoading(false);
-      })
-      .catch(() => {
-        setTrendError('트렌드 정보를 불러오지 못했습니다.');
-        setTrendLoading(false);
-      });
-  }, []);
+  // 트렌드 데이터 정렬
+  const sortedTrends = useMemo(() => {
+    if (!Array.isArray(trendData)) return [];
+    return [...trendData].sort((a, b) => a.rank - b.rank);
+  }, [trendData]);
 
-  // feed 데이터 append (content가 배열일 때만)
+  // 피드 데이터 처리
   useEffect(() => {
-    if (feedData && Array.isArray(feedData.data?.content)) {
-      setFeedList(prev =>
-        feedPage === 0 ? feedData.data.content : [...prev, ...feedData.data.content]
+    if (!feedData) return;
+
+    // feedData는 PagePostDetailResponse 타입
+    const feedPageInfo: PagePostDetailResponse = feedData.data;
+    if (Array.isArray(feedPageInfo.content)) {
+      setFeedItems(prev =>
+        feedPage === 0 ? feedPageInfo.content : [...prev, ...feedPageInfo.content]
       );
-      setFeedLast(feedData.data.last);
-    } else if (feedData && feedPage === 0) {
-      setFeedList([]);
-      setFeedLast(true);
+      setFeedIsLast(feedPageInfo.last);
     }
   }, [feedData, feedPage]);
 
-  // search 데이터 append (content가 배열일 때만)
+  // 검색 데이터 처리
   useEffect(() => {
-    if (debouncedSearch && searchData && Array.isArray(searchData.content)) {
-      setSearchList(prev =>
-        searchPage === 0 ? searchData.content : [...prev, ...searchData.content]
+    if (!debouncedSearch || !searchData) return;
+
+    // searchData는 PagePostDetailResponse 타입
+    const pageData: PagePostDetailResponse = searchData.data;
+    if (Array.isArray(pageData.content)) {
+      setSearchItems(prev =>
+        searchPage === 0 ? pageData.content : [...prev, ...pageData.content]
       );
-      setSearchLast(searchData.last);
-    } else if (debouncedSearch && searchData && searchPage === 0) {
-      setSearchList([]);
-      setSearchLast(true);
+      setSearchIsLast(pageData.last);
     }
   }, [searchData, searchPage, debouncedSearch]);
 
-  // 검색어 변경 시 검색 페이지/리스트 초기화
+  // 검색어 변경 시 검색 리스트 초기화
   useEffect(() => {
-    setSearchPage(0);
-    setSearchList([]);
-    setSearchLast(false);
+    if (debouncedSearch !== prevDebouncedSearchRef.current) {
+      prevDebouncedSearchRef.current = debouncedSearch;
+      setSearchPage(0);
+      setSearchItems([]);
+      setSearchIsLast(false);
+    }
   }, [debouncedSearch]);
 
-  // 무한스크롤 IntersectionObserver
-  const loaderRef = React.useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!loaderRef.current) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting) {
-          if (debouncedSearch) {
-            if (
-              !searchLast &&
-              !searchFetching &&
-              !(searchPage === 0 && searchLoading) // 첫 페이지 로딩 중이면 skip
-            ) {
-              setSearchPage(p => p + 1);
-            }
-          } else {
-            if (
-              !feedLast &&
-              !feedFetching &&
-              !(feedPage === 0 && feedLoading) // 첫 페이지 로딩 중이면 skip
-            ) {
-              setFeedPage(p => p + 1);
-            }
+  // 무한스크롤 처리
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+
+  const handleIntersection = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting) {
+        if (isSearchMode) {
+          const isFirstPageLoading = searchPage === 0 && searchLoading;
+          if (!searchIsLast && !searchFetching && !isFirstPageLoading) {
+            setSearchPage(prev => prev + 1);
+          }
+        } else {
+          const isFirstPageLoading = feedPage === 0 && feedLoading;
+          if (!feedIsLast && !feedFetching && !isFirstPageLoading && feedItems.length > 0) {
+            setFeedPage(prev => prev + 1);
           }
         }
-      },
-      { threshold: 1 }
-    );
+      }
+    },
+    [
+      isSearchMode,
+      searchPage,
+      searchLoading,
+      searchIsLast,
+      searchFetching,
+      feedPage,
+      feedLoading,
+      feedIsLast,
+      feedFetching,
+      feedItems.length,
+    ]
+  );
+
+  useEffect(() => {
+    if (!loaderRef.current) return;
+
+    const observer = new IntersectionObserver(handleIntersection, { threshold: 1 });
     observer.observe(loaderRef.current);
+
     return () => observer.disconnect();
-  }, [
-    debouncedSearch,
-    searchLast,
-    searchLoading,
-    searchFetching,
-    searchPage,
-    feedLast,
-    feedLoading,
-    feedFetching,
-    feedPage,
-  ]);
+  }, [handleIntersection]);
 
-  // 트렌드 상태 아이콘/텍스트 기존대로
-  const getTrendStatus = (status: string) => {
-    switch (status) {
-      case 'UP':
-        return <span className='font-bold text-green-600'>▲</span>;
-      case 'DOWN':
-        return <span className='font-bold text-red-500'>▼</span>;
-      case 'NEW':
-        return <span className='font-bold text-blue-500'>NEW</span>;
-      case 'SAME':
-        return <span className='font-bold text-gray-400'>-</span>;
-      case 'OUT':
-        return <span className='font-bold text-gray-300'>X</span>;
-      default:
-        return status;
+  // 트렌드 상태 렌더링
+  const renderTrendStatus = useCallback((status: string) => {
+    const statusConfig = {
+      UP: { icon: '▲', className: 'font-bold text-green-600' },
+      DOWN: { icon: '▼', className: 'font-bold text-red-500' },
+      NEW: { icon: 'NEW', className: 'font-bold text-blue-500' },
+      SAME: { icon: '-', className: 'font-bold text-gray-400' },
+      OUT: { icon: 'X', className: 'font-bold text-gray-300' },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig];
+    return config ? <span className={config.className}>{config.icon}</span> : <span>{status}</span>;
+  }, []);
+
+  // 렌더링 상태 계산
+  const renderState = useMemo(() => {
+    if (isSearchMode) {
+      if (searchItems.length === 0 && searchLoading) return 'loading';
+      if (searchError) return 'error';
+      if (searchItems.length === 0) return 'empty';
+      return 'data';
     }
-  };
 
-  // PostDetailResponse -> PostCard의 Post 타입 변환 함수 (방어적)
-  const toPostCardData = (post: PostDetailResponse) => ({
-    id: post.id,
-    description: post.content ?? '',
-    likes: post.likeCnt ?? 0,
-    comments: 0, // 댓글 수 별도 API 필요
-    isPrivate: !post.isPublic,
-    createdAt: post.createdAt ?? '',
-    tags: Array.isArray((post as any).tags) ? (post as any).tags : [],
-    playlist: {
-      tracks: Array.isArray(post.playlist?.tracks)
-        ? post.playlist.tracks.map((track, idx) => ({
-            id: track.trackId || idx + 1,
-            artist: track.artist ?? '',
-            duration:
-              typeof track.durationMs === 'number'
-                ? `${Math.floor(track.durationMs / 60000)}:${String(Math.floor((track.durationMs % 60000) / 1000)).padStart(2, '0')}`
-                : '0:00',
-            cover: track.imageUrl ?? '',
-            title: track.title ?? '',
-            album: track.album ?? '',
-          }))
-        : [],
-      totalTracks:
-        typeof post.playlist?.totalTracks === 'number' ? post.playlist.totalTracks : undefined,
-      totalLengthSec:
-        typeof post.playlist?.totalLengthSec === 'number'
-          ? post.playlist.totalLengthSec
-          : undefined,
-      spotifyUrl: post.playlist?.spotifyUrl ?? '',
-    },
-    user: {
-      name: post.name || post.userProfileName || post.userName || '',
-      username: post.username || post.userName || '',
-      avatar: post.avatarUrl || post.userProfileImage || '',
-    },
-  });
-
+    if (feedItems.length === 0 && feedLoading) return 'loading';
+    if (feedError) return 'error';
+    if (feedItems.length === 0) return 'empty';
+    return 'data';
+  }, [
+    isSearchMode,
+    searchItems.length,
+    searchLoading,
+    searchError,
+    feedItems.length,
+    feedLoading,
+    feedError,
+  ]);
 
   return (
     <div
@@ -222,18 +233,18 @@ const ExplorePage: React.FC = () => {
           {trendLoading ? (
             <div className='py-8 text-center text-gray-400'>트렌드 로딩중...</div>
           ) : trendError ? (
-            <div className='py-8 text-center text-red-400'>{trendError}</div>
-          ) : Array.isArray(trendList) && trendList.length === 0 ? (
+            <div className='py-8 text-center text-red-400'>트렌드 정보를 불러오지 못했습니다.</div>
+          ) : sortedTrends.length === 0 ? (
             <div className='py-8 text-center text-gray-400'>트렌드 피드가 없습니다.</div>
           ) : (
             <ul>
-              {(Array.isArray(trendList) ? trendList.slice(0, 5) : []).map((trend, idx) => (
+              {sortedTrends.slice(0, 5).map((trend, idx) => (
                 <li
                   key={trend.postId}
-                  className={`flex cursor-pointer items-center px-5 py-4 transition ${idx !== (trendList?.length ?? 0) - 1 ? '' : ''}`}
+                  className='flex cursor-pointer items-center px-5 py-4 transition'
                   style={{
                     borderBottom:
-                      idx !== (trendList?.length ?? 0) - 1 ? '1px solid var(--stroke)' : undefined,
+                      idx !== sortedTrends.length - 1 ? '1px solid var(--stroke)' : undefined,
                     background: 'transparent',
                   }}
                   onClick={() => navigate(`/post/${trend.postId}`)}
@@ -245,15 +256,15 @@ const ExplorePage: React.FC = () => {
                     className='min-w-0 flex-1 truncate text-[15px] font-semibold'
                     style={{ color: 'var(--text-primary)' }}
                   >
-                    {trend.postContent && trend.postContent.length > 24
-                      ? trend.postContent.slice(0, 24) + '...'
+                    {trend.postContent?.length > 24
+                      ? `${trend.postContent.slice(0, 24)}...`
                       : trend.postContent}
                   </div>
                   <div className='ml-4 flex flex-shrink-0 items-center gap-2'>
                     <span className='rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700'>
                       {trend.userName}
                     </span>
-                    {getTrendStatus(trend.trendStatus)}
+                    {renderTrendStatus(trend.trendStatus)}
                     {trend.rankChange !== 0 && (
                       <span className='ml-1 text-xs text-gray-500'>
                         {trend.rankChange > 0 ? `+${trend.rankChange}` : trend.rankChange}
@@ -282,43 +293,43 @@ const ExplorePage: React.FC = () => {
         </div>
         {/* 피드/검색 결과 */}
         <div className='mb-10 grid grid-cols-1 gap-3'>
-          {debouncedSearch ? (
-            searchList.length === 0 && searchLoading ? (
-              <div className='py-12 text-center text-gray-400'>검색중...</div>
-            ) : searchError ? (
-              <div className='py-12 text-center text-red-400'>검색 결과를 불러오지 못했습니다.</div>
-            ) : searchList.length === 0 ? (
-              <div className='py-12 text-center text-gray-400'>검색 결과가 없습니다.</div>
-            ) : (
-              searchList.map(post => (
-                <PostCard key={post.id} post={toPostCardData(post)} showAuthor={true} />
-              ))
-            )
-          ) : feedList.length === 0 &&
-            Array.isArray(feedData?.data?.content) &&
-            feedData.data.content.length > 0 ? (
-            // feedList가 비어있고 feedData.data.content가 배열이면 강제로 PostCard 렌더링
-            feedData.data.content.map(post => (
-              <PostCard key={post.id} post={toPostCardData(post)} showAuthor={true} />
-            ))
-          ) : feedList.length === 0 && feedLoading ? (
-            <div className='py-12 text-center text-gray-400'>피드 로딩중...</div>
-          ) : feedError ? (
-            <div className='py-12 text-center text-red-400'>피드 정보를 불러오지 못했습니다.</div>
-          ) : feedList.length === 0 ? (
-            <div className='py-12 text-center text-gray-400'>피드가 없습니다.</div>
-          ) : (
-            feedList.map(post => (
-              <PostCard key={post.id} post={toPostCardData(post)} showAuthor={true} />
-            ))
+          {renderState === 'loading' && (
+            <div className='py-12 text-center text-gray-400'>
+              {isSearchMode ? '검색중...' : '피드 로딩중...'}
+            </div>
           )}
+
+          {renderState === 'error' && (
+            <div className='py-12 text-center text-red-400'>
+              {isSearchMode
+                ? '검색 결과를 불러오지 못했습니다.'
+                : '피드 정보를 불러오지 못했습니다.'}
+            </div>
+          )}
+
+          {renderState === 'empty' && (
+            <div className='py-12 text-center text-gray-400'>
+              {isSearchMode ? '검색 결과가 없습니다.' : '피드가 없습니다.'}
+            </div>
+          )}
+
+          {renderState === 'data' &&
+            (isSearchMode ? searchItems : feedItems).map(post => (
+              <PostCard key={post.id} post={post} showAuthor={true} />
+            ))}
+
           {/* 무한스크롤 로더 */}
-          <div ref={loaderRef} style={{ height: 32 }} />
-          {(debouncedSearch ? searchFetching : feedFetching) && (
+          {!(
+            (isSearchMode ? searchIsLast : feedIsLast) ||
+            (isSearchMode ? searchItems.length === 0 : feedItems.length === 0)
+          ) && <div ref={loaderRef} style={{ height: 32, marginTop: 16 }} />}
+
+          {(isSearchMode ? searchFetching : feedFetching) && (
             <div className='py-4 text-center text-gray-400'>불러오는 중...</div>
           )}
-          {(debouncedSearch ? searchLast : feedLast) &&
-            (debouncedSearch ? searchList.length > 0 : feedList.length > 0) && (
+
+          {(isSearchMode ? searchIsLast : feedIsLast) &&
+            (isSearchMode ? searchItems.length > 0 : feedItems.length > 0) && (
               <div className='py-4 text-center text-gray-400'>마지막 페이지입니다.</div>
             )}
         </div>
