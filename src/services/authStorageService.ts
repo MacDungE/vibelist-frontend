@@ -6,7 +6,7 @@ const USER_KEY = 'user';
 export const authStorageService = {
   getAccessToken: (): string | null => {
     try {
-      const accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+      const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       return accessToken ? JSON.parse(accessToken) : null;
     } catch (e) {
       console.error('Error getting access token from session storage', e);
@@ -16,7 +16,7 @@ export const authStorageService = {
 
   setAccessToken: (token: string): void => {
     try {
-      sessionStorage.setItem(ACCESS_TOKEN_KEY, JSON.stringify(token));
+      localStorage.setItem(ACCESS_TOKEN_KEY, JSON.stringify(token));
     } catch (e) {
       console.error('Error setting access token in session storage', e);
     }
@@ -24,7 +24,7 @@ export const authStorageService = {
 
   getUser: (): User | null => {
     try {
-      const user = sessionStorage.getItem(USER_KEY);
+      const user = localStorage.getItem(USER_KEY);
       return user ? JSON.parse(user) : null;
     } catch (e) {
       console.error('Error getting user from session storage', e);
@@ -34,7 +34,7 @@ export const authStorageService = {
 
   setUser: (user: User): void => {
     try {
-      sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
     } catch (e) {
       console.error('Error setting user in session storage', e);
     }
@@ -42,8 +42,8 @@ export const authStorageService = {
 
   clear: (): void => {
     try {
-      sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-      sessionStorage.removeItem(USER_KEY);
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
     } catch (e) {
       console.error('Error clearing session storage', e);
     }
