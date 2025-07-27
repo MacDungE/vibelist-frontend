@@ -129,7 +129,7 @@ const UserProfilePage: React.FC = () => {
         setLikesLoading(false);
       })
       .catch(() => {
-        setLikedPosts([]);
+        // setLikedPosts([]); // 기존 데이터 유지 (에러 시 likedPosts를 비우지 않음)
         setLikesLoading(false);
       });
   }, [username, tab, page, size]);
@@ -264,20 +264,6 @@ const UserProfilePage: React.FC = () => {
             </div>
           )}
         </section>
-        {/* 페이지네이션 */}
-        {totalPages > 1 && (
-          <div className='my-6 flex justify-center gap-2'>
-            {Array.from({ length: totalPages }).map((_, idx) => (
-              <button
-                key={idx}
-                className={`rounded px-3 py-1 text-sm font-semibold ${page === idx ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-700'}`}
-                onClick={() => setPage(idx)}
-              >
-                {idx + 1}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
       {/* 프로필 편집 모달 */}
       {showEditModal && (

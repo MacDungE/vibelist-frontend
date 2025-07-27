@@ -17,6 +17,7 @@ import {
   useInViewPostLikeStatus,
   usePostLike,
   useUpdatePost,
+  useDeletePost, // 추가
 } from '@/queries/usePostQueries';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -241,7 +242,7 @@ const PostCard: React.FC<PostCardProps> = ({
       setShowLoginModal(true);
       return;
     }
-    
+
     postLikeMutation.mutate();
   };
 
@@ -275,9 +276,21 @@ const PostCard: React.FC<PostCardProps> = ({
     });
   };
 
-  const handleDeletePost = () => {
+  const deletePostMutation = useDeletePost(); // 추가
+  const handleDeletePost = async () => {
     if (window.confirm('정말로 이 포스트를 삭제하시겠습니까?')) {
-      alert('포스트 삭제 기능은 추후 구현 예정입니다.');
+      try {
+        await deletePostMutation.mutateAsync(post.id);
+        alert('포스트가 삭제되었습니다.');
+        // 삭제 후 페이지 이동 또는 목록 갱신 등 후처리
+        if (location.pathname.includes('/post/')) {
+          navigate('/'); // 상세 페이지라면 홈으로 이동
+        } else if (typeof onPostEdited === 'function') {
+          onPostEdited(); // 목록 갱신 콜백
+        }
+      } catch (e) {
+        alert('포스트 삭제에 실패했습니다.');
+      }
     }
   };
 
@@ -352,7 +365,7 @@ const PostCard: React.FC<PostCardProps> = ({
               {post.userName && <span className='text-xs text-gray-400'>@{post.userName}</span>}
             </div>
             <p className='text-[13px]' style={{ color: 'var(--text-secondary)' }}>
-              {dayjs(post.updatedAt).fromNow()}
+              {dayjs(post.createdAt).fromNow()}
             </p>
           </div>
         </div>
