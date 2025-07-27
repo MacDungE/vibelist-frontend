@@ -25,16 +25,20 @@ const PlaylistResultPage: React.FC = () => {
 
   // location.state에서 추천 결과, 감정, 무드 정보 받기
   const recommendations: TrackRsDto[] = location.state?.recommendations || [];
-  // 추천 결과가 없으면 홈으로 리다이렉트
+  const emotionText = location.state?.emotionText || ''; // 텍스트 모드로 입력된 감정 텍스트
+
+  // 추천 결과가 없으면 홈으로 리다이렉트 (텍스트 모드가 아닌 경우에만)
   React.useEffect(() => {
     if (
       !location.state ||
-      !Array.isArray(location.state.recommendations) ||
-      location.state.recommendations.length === 0
+      ((!Array.isArray(location.state.recommendations) ||
+        location.state.recommendations.length === 0) &&
+        !location.state.emotionText) // 텍스트 모드가 아닌 경우에만 리다이렉트
     ) {
       window.location.replace('/');
     }
   }, [location.state]);
+
   const selectedEmotion = location.state?.selectedEmotion || '감정 정보 없음';
   const selectedMoodChange = location.state?.selectedMoodChange || '기분 변화 정보 없음';
 
@@ -48,14 +52,24 @@ const PlaylistResultPage: React.FC = () => {
     // 띄어쓰기 대신 언더스코어로 연결
     return `${emotion}_상태에서_${mood}로_변화하기`;
   }
-  const fixedTag = {
-    id: -1,
-    name: getFixedTagValue(selectedEmotion, selectedMoodChange),
-    displayName: getFixedTagText(selectedEmotion, selectedMoodChange),
-    emotion: selectedEmotion,
-    mood: selectedMoodChange,
-    fixed: true,
-  };
+
+  // 텍스트 모드인지 차트 모드인지에 따라 고정 태그 생성
+  const fixedTag = emotionText
+    ? {
+        id: -1,
+        name: 'AI_생성',
+        displayName: 'AI 생성',
+        mood: selectedMoodChange,
+        fixed: true,
+      }
+    : {
+        id: -1,
+        name: getFixedTagValue(selectedEmotion, selectedMoodChange),
+        displayName: getFixedTagText(selectedEmotion, selectedMoodChange),
+        emotion: selectedEmotion,
+        mood: selectedMoodChange,
+        fixed: true,
+      };
 
   // TrackRsDto → UI용 Track 변환
   const convertTrack = (track: TrackRsDto, idx: number) => ({
@@ -471,9 +485,16 @@ const PlaylistResultPage: React.FC = () => {
     try {
       // 고정 태그 + 사용자 태그 조합
       const allTags = [fixedTag.name, ...tags.map(t => t.name)];
+
+      // 텍스트 모드로 입력된 감정 텍스트가 있으면 설명에 추가
+      let finalDescription = description;
+      if (emotionText) {
+        finalDescription = `[감정 입력]\n${emotionText}\n\n${description}`;
+      }
+
       const postReq = {
         tracks,
-        content: description,
+        content: finalDescription,
         tags: allTags,
         isPublic,
       };
@@ -610,14 +631,25 @@ const PlaylistResultPage: React.FC = () => {
                 <span className='text-sm text-gray-500'>{playlist.length}곡</span>
               </div>
               <div className='mb-4 flex flex-wrap gap-2'>
-                <div className='inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5'>
-                  <i className='fas fa-smile text-[#4A6CF7]'></i>
-                  <span className='text-sm text-gray-700'>{selectedEmotion}</span>
-                </div>
-                <div className='inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5'>
-                  <i className='fas fa-arrow-up text-[#4A6CF7]'></i>
-                  <span className='text-sm text-gray-700'>{selectedMoodChange}</span>
-                </div>
+                {emotionText ? (
+                  // 텍스트 모드로 입력된 경우
+                  <div className='inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5'>
+                    <i className='fas fa-comment text-[#4A6CF7]'></i>
+                    <span className='text-sm text-gray-700'>{emotionText}</span>
+                  </div>
+                ) : (
+                  // 차트 모드로 선택된 경우
+                  <>
+                    <div className='inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5'>
+                      <i className='fas fa-smile text-[#4A6CF7]'></i>
+                      <span className='text-sm text-gray-700'>{selectedEmotion}</span>
+                    </div>
+                    <div className='inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5'>
+                      <i className='fas fa-arrow-up text-[#4A6CF7]'></i>
+                      <span className='text-sm text-gray-700'>{selectedMoodChange}</span>
+                    </div>
+                  </>
+                )}
               </div>
               <div className='scrollbar-thin min-h-0 flex-1 overflow-y-auto pr-2'>
                 {playlist.length === 0 ? (

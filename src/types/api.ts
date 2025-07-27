@@ -25,7 +25,7 @@ export interface RecommendRqDto {
   userValence?: number;
   userEnergy?: number;
   text?: string;
-  mode: 'MAINTAIN' | 'ELEVATE' | 'CALM_DOWN' | 'REVERSE';
+  mode?: 'MAINTAIN' | 'ELEVATE' | 'CALM_DOWN' | 'REVERSE';
 }
 
 // 게시글 관련

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import StepCard from '@/components/common/StepCard';
@@ -29,6 +29,8 @@ const HomePage = () => {
   const [selectedMoodChange, setSelectedMoodChange] = useState<MoodChangeOption | null>(null);
   const [showGuide, setShowGuide] = useState(true);
   const [expandedCards, setExpandedCards] = useState<number[]>([1]);
+  const [showTextMode, setShowTextMode] = useState(false);
+  const [emotionText, setEmotionText] = useState('');
 
   const chartRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef<HTMLDivElement>(null);
@@ -299,122 +301,206 @@ const HomePage = () => {
 
   return (
     <div
-      className='w-full font-sans'
+      className='w-full pt-6 font-sans'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
       <DocumentTitle title='홈' />
       <div className='mx-auto flex w-full max-w-[600px] flex-col px-0'>
         {/* 메인 컨텐츠 */}
         <div className='flex w-full flex-1 flex-col items-center justify-center' id='main-content'>
-          {/* Step 1 - 감정 선택 */}
-          <StepCard
-            step={1}
-            title='감정 선택'
-            isActive={activeStep === 1}
-            isExpanded={expandedCards.includes(1)}
-            onToggle={() => toggleCard(1)}
-            summaryContent={getEmotionSummary()}
-            data-step='1'
-          >
-            <div className='scale-[0.85] transform-gpu text-center sm:scale-100'>
-              <h2 className='mb-2 text-lg text-gray-700 sm:mb-3'>지금 당신의 기분은 어떤가요?</h2>
-              <p className='mb-2 text-2xl text-gray-700 sm:mb-4'>
-                <span className='font-semibold text-indigo-600'>
-                  {position.x === 50 && position.y === 50
-                    ? '감정을 선택해주세요'
-                    : getEmotionState(position.x, position.y)}
-                </span>
-              </p>
-            </div>
-            <EmotionChart
-              position={position}
-              setPosition={setPosition}
-              isDragging={isDragging}
-              setIsDragging={setIsDragging}
-              chartRef={chartRef}
-              pointerRef={pointerRef}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-            />
-            <div className='mt-8 flex justify-center'>
-              <button
-                onClick={() => {
-                  if (position.x === 50 && position.y === 50) {
-                    showErrorToast('감정을 선택해주세요');
-                    return;
-                  }
-                  goToStep(2);
-                  setExpandedCards([2]);
-                }}
-                className='!rounded-button group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] px-10 py-4 font-medium whitespace-nowrap text-[#F7F9FC] shadow-md transition-all duration-300 hover:translate-y-[-3px] hover:shadow-lg'
-              >
-                다음
-              </button>
-            </div>
-          </StepCard>
-
-          {/* Step 2 - 기분 변화 선택 */}
-          {(activeStep >= 2 || activeStep === 1) && (
-            <StepCard
-              step={2}
-              title='기분 변화 선택'
-              isActive={activeStep === 2}
-              isExpanded={expandedCards.includes(2)}
-              onToggle={() => {
-                if (activeStep >= 2) {
-                  toggleCard(2);
-                }
-              }}
-              summaryContent={getMoodChangeSummary()}
-              data-step='2'
-            >
-              <div className='mb-4 flex flex-col items-center sm:mb-6'>
-                <h3 className='mb-2 text-lg font-medium text-gray-800 sm:text-xl md:text-2xl'>
-                  이 기분을 어떻게 하고 싶으신가요?
-                </h3>
-                <p className='text-center text-xs text-gray-600 sm:text-sm md:text-base'>
-                  아래 옵션 중에서 원하시는 방향을 선택해주세요
+          {showTextMode ? (
+            // 텍스트 모드
+            <div className='mx-auto w-full max-w-2xl rounded-2xl border border-gray-100 bg-white p-6 shadow-lg'>
+              <div className='mb-4'>
+                <h3 className='mb-2 text-xl font-semibold text-gray-800'>AI와 감정을 나눠보세요</h3>
+                <p className='text-sm text-gray-600'>
+                  지금 어떤 기분인지, 무슨 일이 있었는지 AI에게 자유롭게 이야기해보세요. 당신의
+                  감정을 이해하고 맞춤 플레이리스트를 만들어드립니다.
                 </p>
               </div>
-              <MoodChangeSelector
-                selected={selectedMoodChange}
-                onSelect={handleMoodChangeSelect}
-                selectedEmotion={getEmotionState(position.x, position.y)}
+              <textarea
+                value={emotionText}
+                onChange={e => setEmotionText(e.target.value)}
+                placeholder='예: 오늘 좋은 일이 있어서 기분이 좋아요. 하지만 조금 긴장도 되고...'
+                className='h-40 w-full resize-none rounded-xl border border-gray-200 p-4 text-gray-700 placeholder-gray-400 focus:border-transparent focus:ring-2 focus:ring-indigo-500 focus:outline-none'
               />
-              <div className='mt-6 flex w-full flex-col justify-center gap-4 sm:mt-8 sm:flex-row sm:gap-6'>
+              <div className='mt-4 flex items-center justify-between'>
                 <button
-                  onClick={() => goToStep(1)}
-                  className='!rounded-button flex cursor-pointer items-center gap-2 px-8 py-4 font-medium whitespace-nowrap text-gray-600 transition-all duration-300 hover:translate-y-[-3px] hover:text-indigo-600'
-                  disabled={isLoading}
+                  onClick={() => setShowTextMode(false)}
+                  className='px-4 py-2 text-gray-600 transition-colors duration-300 hover:text-indigo-600'
                 >
-                  <i className='fas fa-arrow-left'></i>
-                  이전
+                  차트 모드로 돌아가기
                 </button>
                 <button
-                  onClick={() => {
-                    if (!selectedMoodChange) {
-                      showErrorToast('기분 변화 옵션을 먼저 선택해주세요');
+                  onClick={async () => {
+                    if (!emotionText.trim()) {
+                      showErrorToast('감정을 입력해주세요');
                       return;
                     }
-                    handleCreatePlaylist();
+
+                    // 로그인 체크
+                    if (!isAuthenticated) {
+                      setShowLoginModal(true);
+                      return;
+                    }
+
+                    try {
+                      // 로딩 상태 시작
+                      setIsLoading(true);
+
+                      // 텍스트 기반 추천 받기
+                      const response = await getRecommendations({
+                        text: emotionText,
+                        mode: 'MAINTAIN',
+                      });
+
+                      // 결과 페이지로 이동
+                      navigate('/playlist-result', {
+                        state: {
+                          emotionText,
+                          recommendations: response.data.data,
+                        },
+                      });
+                    } catch (error) {
+                      console.error('Failed to create playlist:', error);
+                      showErrorToast('플레이리스트 생성에 실패했습니다. 다시 시도해주세요.');
+                    } finally {
+                      setIsLoading(false);
+                    }
                   }}
-                  disabled={isLoading || !selectedMoodChange}
-                  className={`!rounded-button group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] px-10 py-4 font-medium whitespace-nowrap text-[#F7F9FC] shadow-md transition-all duration-300 hover:translate-y-[-3px] hover:shadow-lg ${!selectedMoodChange || isLoading ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:shadow-none' : ''}`}
+                  disabled={!emotionText.trim() || isLoading}
+                  className={`rounded-full px-6 py-3 font-medium transition-all duration-300 ${
+                    emotionText.trim() && !isLoading
+                      ? 'bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] text-white hover:translate-y-[-2px] hover:shadow-lg'
+                      : 'cursor-not-allowed bg-gray-200 text-gray-400'
+                  }`}
                 >
-                  <span className='relative z-10'>
-                    {isLoading ? '플레이리스트 생성 중...' : '플레이리스트 만들기'}
-                  </span>
-                  {isLoading ? (
-                    <i className='fas fa-spinner fa-spin relative z-10 ml-1'></i>
-                  ) : (
-                    <i className='fas fa-music relative z-10 ml-1'></i>
-                  )}
-                  <div
-                    className={`absolute inset-0 -translate-x-full skew-x-12 bg-white/10 ${selectedMoodChange && !isLoading ? 'group-hover:animate-shine' : ''}`}
-                  ></div>
+                  {isLoading ? '플레이리스트 생성 중...' : '플레이리스트 만들기'}
                 </button>
               </div>
-            </StepCard>
+            </div>
+          ) : (
+            // 기존 차트 모드
+            <>
+              {/* Step 1 - 감정 선택 */}
+              <StepCard
+                step={1}
+                title='감정 선택'
+                isActive={activeStep === 1}
+                isExpanded={expandedCards.includes(1)}
+                onToggle={() => toggleCard(1)}
+                summaryContent={getEmotionSummary()}
+                data-step='1'
+              >
+                <div className='scale-[0.85] transform-gpu text-center sm:scale-100'>
+                  <h2 className='mb-2 text-lg text-gray-700 sm:mb-3'>
+                    지금 당신의 기분은 어떤가요?
+                  </h2>
+                  <p className='mb-2 text-2xl text-gray-700 sm:mb-4'>
+                    <span className='font-semibold text-indigo-600'>
+                      {position.x === 50 && position.y === 50
+                        ? '감정을 선택해주세요'
+                        : getEmotionState(position.x, position.y)}
+                    </span>
+                  </p>
+                </div>
+                <EmotionChart
+                  position={position}
+                  setPosition={setPosition}
+                  isDragging={isDragging}
+                  setIsDragging={setIsDragging}
+                  chartRef={chartRef}
+                  pointerRef={pointerRef}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                />
+                <div className='mt-8 flex flex-col items-center justify-center gap-5'>
+                  <button
+                    onClick={() => {
+                      if (position.x === 50 && position.y === 50) {
+                        showErrorToast('감정을 선택해주세요');
+                        return;
+                      }
+                      goToStep(2);
+                      setExpandedCards([2]);
+                    }}
+                    className='!rounded-button group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] px-10 py-4 font-medium whitespace-nowrap text-[#F7F9FC] shadow-md transition-all duration-300 hover:translate-y-[-3px] hover:shadow-lg'
+                  >
+                    다음
+                  </button>
+                  <h4
+                    onClick={() => setShowTextMode(!showTextMode)}
+                    className='cursor-pointer bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-[#F59E0B] bg-clip-text font-semibold text-transparent transition-colors duration-200 hover:underline'
+                  >
+                    다음 버튼 옆에 선택지에 맞는 감정이 없나요?
+                  </h4>
+                </div>
+              </StepCard>
+
+              {/* Step 2 - 기분 변화 선택 */}
+              {(activeStep >= 2 || activeStep === 1) && (
+                <StepCard
+                  step={2}
+                  title='기분 변화 선택'
+                  isActive={activeStep === 2}
+                  isExpanded={expandedCards.includes(2)}
+                  onToggle={() => {
+                    if (activeStep >= 2) {
+                      toggleCard(2);
+                    }
+                  }}
+                  summaryContent={getMoodChangeSummary()}
+                  data-step='2'
+                >
+                  <div className='mb-4 flex flex-col items-center sm:mb-6'>
+                    <h3 className='mb-2 text-lg font-medium text-gray-800 sm:text-xl md:text-2xl'>
+                      이 기분을 어떻게 하고 싶으신가요?
+                    </h3>
+                    <p className='text-center text-xs text-gray-600 sm:text-sm md:text-base'>
+                      아래 옵션 중에서 원하시는 방향을 선택해주세요
+                    </p>
+                  </div>
+                  <MoodChangeSelector
+                    selected={selectedMoodChange}
+                    onSelect={handleMoodChangeSelect}
+                    selectedEmotion={getEmotionState(position.x, position.y)}
+                  />
+                  <div className='mt-6 flex w-full flex-col justify-center gap-4 sm:mt-8 sm:flex-row sm:gap-6'>
+                    <button
+                      onClick={() => goToStep(1)}
+                      className='!rounded-button flex cursor-pointer items-center gap-2 px-8 py-4 font-medium whitespace-nowrap text-gray-600 transition-all duration-300 hover:translate-y-[-3px] hover:text-indigo-600'
+                      disabled={isLoading}
+                    >
+                      <i className='fas fa-arrow-left'></i>
+                      이전
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!selectedMoodChange) {
+                          showErrorToast('기분 변화 옵션을 먼저 선택해주세요');
+                          return;
+                        }
+                        handleCreatePlaylist();
+                      }}
+                      disabled={isLoading || !selectedMoodChange}
+                      className={`!rounded-button group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#4A6CF7] to-[#9B8CFF] px-10 py-4 font-medium whitespace-nowrap text-[#F7F9FC] shadow-md transition-all duration-300 hover:translate-y-[-3px] hover:shadow-lg ${!selectedMoodChange || isLoading ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:shadow-none' : ''}`}
+                    >
+                      <span className='relative z-10'>
+                        {isLoading ? '플레이리스트 생성 중...' : '플레이리스트 만들기'}
+                      </span>
+                      {isLoading ? (
+                        <i className='fas fa-spinner fa-spin relative z-10 ml-1'></i>
+                      ) : (
+                        <i className='fas fa-music relative z-10 ml-1'></i>
+                      )}
+                      <div
+                        className={`absolute inset-0 -translate-x-full skew-x-12 bg-white/10 ${selectedMoodChange && !isLoading ? 'group-hover:animate-shine' : ''}`}
+                      ></div>
+                    </button>
+                  </div>
+                </StepCard>
+              )}
+            </>
           )}
         </div>
       </div>
