@@ -108,7 +108,7 @@ const ExplorePage: React.FC = () => {
 
     // feedData는 PagePostDetailResponse 타입
     const feedPageInfo: PagePostDetailResponse = feedData.data;
-    if (Array.isArray(feedPageInfo.content)) {
+    if (Array.isArray(feedPageInfo?.content)) {
       setFeedItems(prev =>
         feedPage === 0 ? feedPageInfo.content : [...prev, ...feedPageInfo.content]
       );
