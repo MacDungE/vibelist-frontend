@@ -12,6 +12,7 @@ import { EMOTION_STATE } from '@/constants/emotion';
 import { getRecommendations } from '@/http/recommendApi';
 
 import type { EmotionPosition, MoodChangeOption } from '@/types/common.ts';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 const initialPosition: EmotionPosition = { x: 50, y: 50 };
 
@@ -301,6 +302,7 @@ const HomePage = () => {
       className='w-full font-sans'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
+      <DocumentTitle title='홈' />
       <div className='mx-auto flex w-full max-w-[600px] flex-col px-0'>
         {/* 메인 컨텐츠 */}
         <div className='flex w-full flex-1 flex-col items-center justify-center' id='main-content'>

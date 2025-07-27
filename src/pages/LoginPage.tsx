@@ -1,4 +1,5 @@
 import React from 'react';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 const LoginPage: React.FC = () => {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -9,6 +10,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className='flex min-h-screen flex-col items-center justify-center bg-gray-50'>
+      <DocumentTitle title='로그인' />
       <div className='mb-10 text-center'>
         <h1 className='text-4xl font-bold text-gray-800'>VibeList</h1>
         <p className='mt-2 text-lg text-gray-600'>당신의 감정을 음악으로 표현하세요</p>

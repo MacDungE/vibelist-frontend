@@ -9,6 +9,7 @@ import { API_BASE_URL } from '@/constants/api';
 import { getProviderDetails } from '@/constants/provider';
 import { isEmpty } from 'lodash';
 import type { SocialAccount } from '@/types/auth.ts';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 interface SpotifyConnection {
   isConnected: boolean;
@@ -161,6 +162,7 @@ const SettingsPage: React.FC = () => {
       className='min-h-screen w-full font-sans'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
+      <DocumentTitle title={'설정'} />
       <div className='mx-auto flex min-h-screen w-full max-w-[600px] flex-col px-0'>
         {/* Header */}
         <div className='flex min-h-0 w-full flex-1 flex-col p-4'>

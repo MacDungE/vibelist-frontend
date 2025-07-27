@@ -1,8 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/common/BottomNav';
 import AuthGuard from '@/components/AuthGuard';
+import { preloadCoreResources } from '@/utils/preload';
 
 // Pages
 import HomePage from '@/pages/HomePage';
@@ -37,6 +38,11 @@ function useViewportHeightVar() {
 
 function App() {
   useViewportHeightVar();
+
+  // 앱 초기화 시 핵심 리소스 미리 로드
+  useEffect(() => {
+    preloadCoreResources();
+  }, []);
 
   return (
     <div

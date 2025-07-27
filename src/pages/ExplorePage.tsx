@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import PostCard from '@/components/common/PostCard';
 import type { PagePostDetailResponse, PostDetailResponse } from '@/types/api';
 import { useFeed, useSearchPosts, useTrends } from '@/queries/useExploreQueries';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 const PAGE_SIZE = 10;
 
@@ -223,6 +224,7 @@ const ExplorePage: React.FC = () => {
       className='min-h-screen w-full pb-20 font-sans'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
+      <DocumentTitle title={'탐색'} />
       <div className='mx-auto flex min-h-screen w-full max-w-[600px] flex-col px-0'>
         {/* 트렌드 피드 */}
         <h2 className='mt-6 mb-4 text-xl font-bold'>트렌드 피드</h2>

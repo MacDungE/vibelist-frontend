@@ -8,6 +8,7 @@ import type { TrackRsDto } from '@/types/api';
 import { createPost } from '@/http/postApi';
 import { suggestTags } from '@/http/tagApi';
 import SavePlaylistModal from '@/components/common/SavePlaylistModal';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 /*
   [이 페이지에서 사용할 API 목록]
@@ -557,6 +558,7 @@ const PlaylistResultPage: React.FC = () => {
       className='min-h-screen w-full'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
+      <DocumentTitle title={'플레이리스트'} />
       {error && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-red-50'>
           <div className='max-w-md rounded-lg bg-white p-6 shadow-lg'>

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getPostDetail } from '@/http/postApi';
 import type { PostDetailResponse } from '@/types/api';
 import PostCard from '@/components/common/PostCard';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 const PostDetailPage: React.FC = () => {
   const { postId } = useParams<{ postId: string }>();
@@ -57,6 +58,7 @@ const PostDetailPage: React.FC = () => {
       className='flex min-h-screen w-full flex-col items-center font-sans'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
+      <DocumentTitle title={post.content.slice(0, 8)} />
       <div className='flex w-full max-w-[600px] flex-col px-0 pt-4'>
         {/* PostCard로 상세 표시 (댓글 미리보기/개수 포함) */}
         <div className='mb-6 px-4'>

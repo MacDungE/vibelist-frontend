@@ -8,6 +8,7 @@ import { NAME_AVATAR_URL } from '@/constants/images.ts';
 import { useUserProfileByUsername } from '@/queries/useUserQueries.ts';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/queries';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 const UserProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -160,6 +161,7 @@ const UserProfilePage: React.FC = () => {
 
   return (
     <div className='min-h-screen w-full bg-[#F9F9F9] font-sans'>
+      <DocumentTitle title={`${username} 프로필`} />
       <div className='mx-auto flex min-h-screen w-full max-w-[600px] flex-col px-0'>
         {/* Profile Card */}
         <section className='mx-auto mb-8 w-full'>

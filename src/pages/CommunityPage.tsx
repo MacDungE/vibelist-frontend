@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import PostCard from '@/components/common/PostCard';
 import type { Post } from '@/components/common/PostCard';
 import { EMOTION_STATE } from '@/constants/emotion';
-
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 // Mock public posts data
 const allPosts: Post[] = [
@@ -71,20 +71,24 @@ const allPosts: Post[] = [
 ];
 
 // Trending: top 2 by likes (for demo)
-const trendingPosts = allPosts.slice().sort((a, b) => b.likes - a.likes).slice(0, 2);
+const trendingPosts = allPosts
+  .slice()
+  .sort((a, b) => b.likes - a.likes)
+  .slice(0, 2);
 
 const CommunityPage: React.FC = () => {
   const [posts] = useState<Post[]>(allPosts);
   const [, setSpotifyModalUri] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen w-full bg-[#F9F9F9] font-sans">
-      <div className="flex flex-col w-full max-w-[600px] mx-auto px-0 min-h-screen">
-        <h1 className="text-3xl font-bold mb-8">커뮤니티</h1>
+    <div className='min-h-screen w-full bg-[#F9F9F9] font-sans'>
+      <DocumentTitle title={'커뮤니티'} />
+      <div className='mx-auto flex min-h-screen w-full max-w-[600px] flex-col px-0'>
+        <h1 className='mb-8 text-3xl font-bold'>커뮤니티</h1>
         {/* 트렌드 섹션 */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4 text-indigo-700">트렌드 게시글</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <section className='mb-10'>
+          <h2 className='mb-4 text-xl font-semibold text-indigo-700'>트렌드 게시글</h2>
+          <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
             {trendingPosts.map(post => (
               <PostCard
                 key={post.id}
@@ -106,10 +110,10 @@ const CommunityPage: React.FC = () => {
         </section>
         {/* 전체 공개 포스트 리스트 */}
         <section>
-          <h2 className="text-lg font-semibold mb-4 text-gray-700">최신 공개 포스트</h2>
-          <div className="grid grid-cols-1 gap-3">
+          <h2 className='mb-4 text-lg font-semibold text-gray-700'>최신 공개 포스트</h2>
+          <div className='grid grid-cols-1 gap-3'>
             {posts.map(post => (
-              <div key={post.id} className="cursor-pointer">
+              <div key={post.id} className='cursor-pointer'>
                 <PostCard
                   post={post}
                   isDarkMode={false}
@@ -127,4 +131,4 @@ const CommunityPage: React.FC = () => {
   );
 };
 
-export default CommunityPage; 
+export default CommunityPage;

@@ -3,25 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { PostsContext } from '@/contexts/PostsContext';
 import SavePlaylistModal from '@/components/common/SavePlaylistModal';
 import { SAMPLE_POST_THUMBNAILS } from '@/constants/images';
+import DocumentTitle from '@/components/seo/DocumentTitle.tsx';
 
 const mockPlaylists = [
   {
     id: 1,
     name: '새벽 감성 플레이리스트',
-    cover:
-      SAMPLE_POST_THUMBNAILS.MIDNIGHT_LOFI,
+    cover: SAMPLE_POST_THUMBNAILS.MIDNIGHT_LOFI,
   },
   {
     id: 2,
     name: '운동할 때 듣는 신나는 음악',
-    cover:
-      SAMPLE_POST_THUMBNAILS.GYM_WORKOUT,
+    cover: SAMPLE_POST_THUMBNAILS.GYM_WORKOUT,
   },
   {
     id: 3,
     name: '비 오는 날의 재즈',
-    cover:
-      SAMPLE_POST_THUMBNAILS.RAINY_JAZZ,
+    cover: SAMPLE_POST_THUMBNAILS.RAINY_JAZZ,
   },
 ];
 
@@ -107,6 +105,7 @@ const PostCreatePage: React.FC = () => {
       className='flex min-h-screen w-full flex-col items-center justify-center pb-20'
       style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}
     >
+      <DocumentTitle title={'글 쓰기'} />
       {/* 플레이리스트 선택 모달 */}
       {showPlaylistModal && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>

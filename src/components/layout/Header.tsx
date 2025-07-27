@@ -27,9 +27,12 @@ function Header() {
         {/* 좌측 여백 */}
         <div className='h-10 w-10 flex-shrink-0'></div>
         {/* 중앙 로고 */}
-        <h1 className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-[#BFA9F2] to-[#C7B6FF] bg-clip-text text-3xl font-bold tracking-[-0.01em] text-transparent select-none lg:text-4xl'>
-          VibeList
-        </h1>
+        <img
+          alt={'vibelist logo'}
+          src={'/logo.png'}
+          className='absolute top-1/2 left-1/2 inline-block h-20 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-[#BFA9F2] to-[#C7B6FF] bg-clip-text text-3xl font-bold tracking-[-0.01em] text-transparent select-none lg:text-4xl'
+        />
+
         {/* 우측 토글 버튼 */}
         {/* <button
           onClick={toggleTheme}
