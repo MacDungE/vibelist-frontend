@@ -68,6 +68,7 @@ const PostDetailPage: React.FC = () => {
             defaultPlaylistExpanded={true}
             defaultCommentsExpanded={true}
             onPostEdited={refetchPost}
+            allowEdit={true}
           />
         </div>
       </div>

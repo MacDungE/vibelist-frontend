@@ -39,6 +39,7 @@ interface PostCardProps {
   defaultPlaylistExpanded?: boolean;
   defaultCommentsExpanded?: boolean;
   onPostEdited?: () => void;
+  allowEdit?: boolean;
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -49,6 +50,7 @@ const PostCard: React.FC<PostCardProps> = ({
   defaultPlaylistExpanded = false,
   defaultCommentsExpanded = false,
   onPostEdited,
+  allowEdit = false,
 }) => {
   const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(defaultPlaylistExpanded);
   const [showCommentsPreview, setShowCommentsPreview] = useState(defaultCommentsExpanded);
@@ -378,8 +380,8 @@ const PostCard: React.FC<PostCardProps> = ({
             PRIVATE
           </div>
         )}
-        {/* 포스트 수정/삭제 버튼 (본인만) */}
-        {canEditPost && (
+        {/* 포스트 수정/삭제 버튼 (본인만 & PostDetailPage에서만) */}
+        {canEditPost && allowEdit && (
           <div className='ml-2 flex gap-2'>
             <button
               className='text-xs text-gray-500 hover:text-green-500 hover:underline'
