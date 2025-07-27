@@ -432,7 +432,7 @@ const HomePage = () => {
                     onClick={() => setShowTextMode(!showTextMode)}
                     className='cursor-pointer bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-[#F59E0B] bg-clip-text font-semibold text-transparent transition-colors duration-200 hover:underline'
                   >
-                    다음 버튼 옆에 선택지에 맞는 감정이 없나요?
+                    선택지에 맞는 감정이 없나요?
                   </h4>
                 </div>
               </StepCard>
